@@ -115,7 +115,10 @@ tests in Stage 1.
 7. A subtask always has the same `folderId`, `memberIds`, and `ownerId` as its
    parent
 8. Deleting a task deletes its subtasks. Deleting a folder deletes its items.
-   Both are client-side batched deletes — there are no Cloud Functions.
+   Both are client-side batched deletes (≤500 ops) — there are no Cloud Functions.
+   Because offline deletes leave orphans on the server, the app must run an
+   opportunistic sweep on startup to batch-delete orphaned items, and export
+   must explicitly filter them to prevent resurrection.
 9. `done == true` → `completedAt != null`
 
 ---

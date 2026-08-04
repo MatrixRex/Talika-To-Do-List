@@ -1,57 +1,164 @@
-import { Button, IconButton, Card, ListRow, Input, Sheet, Menu, Dialog } from './ui';
-import { Icon } from './ui/icons';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { collection, onSnapshot, getDocs } from 'firebase/firestore';
+import { db } from './lib/firebase';
+import { exportData, wipeData, importData } from './lib/export-import';
+import { createItem, createFolder, orphanSweep } from './lib/db';
+import './App.css';
 
 function App() {
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [items, setItems] = useState<any[]>([]);
+  const [folders, setFolders] = useState<any[]>([]);
+  const [exportText, setExportText] = useState('');
+  const [importText, setImportText] = useState('');
+  const [status, setStatus] = useState('Connecting to Emulator...');
+
+  useEffect(() => {
+    // Run orphan sweep on startup
+    orphanSweep().catch(console.error);
+    
+    // Subscribe to collections
+    const unsubItems = onSnapshot(collection(db, 'items'), (snap) => {
+      setItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setStatus('Connected');
+    }, (error) => {
+      setStatus(`Error: ${error.message}`);
+    });
+    
+    const unsubFolders = onSnapshot(collection(db, 'folders'), (snap) => {
+      setFolders(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    
+    return () => {
+      unsubItems();
+      unsubFolders();
+    };
+  }, []);
+
+  const handleExport = async () => {
+    try {
+      const text = await exportData();
+      setExportText(text);
+      setStatus('Export complete');
+    } catch (e: any) {
+      setStatus(`Export failed: ${e.message}`);
+    }
+  };
+
+  const handleWipe = async () => {
+    try {
+      await wipeData();
+      setStatus('Data wiped');
+      setExportText('');
+    } catch (e: any) {
+      setStatus(`Wipe failed: ${e.message}`);
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      if (!importText) {
+        setStatus('Nothing to import');
+        return;
+      }
+      await importData(importText);
+      setStatus('Import complete');
+    } catch (e: any) {
+      setStatus(`Import failed: ${e.message}`);
+    }
+  };
+  
+  const handleAddFolder = async () => {
+    try {
+      await createFolder({
+        ownerId: 'user-1',
+        name: 'Test Folder ' + Math.floor(Math.random() * 1000),
+        icon: 'folder',
+        color: 'blue',
+        sortKey: 'a0',
+        memberIds: ['user-1'],
+        roles: { 'user-1': 'owner' }
+      });
+      setStatus('Folder added');
+    } catch (e: any) {
+      setStatus(`Error adding folder: ${e.message}`);
+    }
+  };
+
+  const handleAddTask = async (folderId: string | null = null, parentId: string | null = null) => {
+    try {
+      let memberIds = ['user-1'];
+      if (folderId) {
+        const folder = folders.find(f => f.id === folderId);
+        if (folder) memberIds = folder.memberIds;
+      }
+      
+      await createItem({
+        folderId,
+        parentId,
+        ownerId: 'user-1',
+        memberIds,
+        title: 'Test Task ' + Math.floor(Math.random() * 1000),
+        done: false,
+        completedAt: null,
+        reminder: null,
+        updatedBy: 'user-1'
+      });
+      setStatus('Task added');
+    } catch (e: any) {
+      setStatus(`Error adding task: ${e.message}`);
+    }
+  };
 
   return (
-    <div className="p-6 max-w-md mx-auto min-h-screen pb-24">
-      <h1 className="text-xl font-bold mb-6 text-text">Talika To-Do - Stage 0</h1>
+    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+      <h1>To-Do Stage 1: Emulator Debug</h1>
+      <p><strong>Status:</strong> {status}</p>
       
-      <Card className="mb-4">
-        <h2 className="text-text-muted mb-2 text-sm">Primitives Test</h2>
-        <div className="flex gap-2 mb-4">
-          <Button onClick={() => setSheetOpen(true)}>Open Sheet</Button>
-          <Button onClick={() => setDialogOpen(true)}>Open Dialog</Button>
-          <div className="relative">
-            <IconButton onClick={() => setMenuOpen(true)}>
-              <Icon name="more" />
-            </IconButton>
-            <Menu isOpen={menuOpen} onClose={() => setMenuOpen(false)}>
-              <div className="p-2 hover:bg-surface cursor-pointer rounded">Item 1</div>
-              <div className="p-2 hover:bg-surface cursor-pointer rounded">Item 2</div>
-            </Menu>
-          </div>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+        <button onClick={handleAddFolder}>Add Folder</button>
+        <button onClick={() => handleAddTask(null, null)}>Add Default Task</button>
+        {folders.length > 0 && (
+          <button onClick={() => handleAddTask(folders[0].id, null)}>Add Task in Folder</button>
+        )}
+        {items.filter(i => !i.parentId).length > 0 && (
+          <button onClick={() => handleAddTask(null, items.find(i => !i.parentId)?.id)}>Add Subtask</button>
+        )}
+        <button onClick={() => orphanSweep().then(() => setStatus('Sweep done'))}>Force Orphan Sweep</button>
+      </div>
+      
+      <div style={{ display: 'flex', gap: '20px' }}>
+        <div style={{ flex: 1 }}>
+          <h3>Export / Wipe / Import</h3>
+          <button onClick={handleExport}>1. Export Data</button>
+          <button onClick={handleWipe}>2. Wipe Data</button>
+          <br /><br />
+          <textarea 
+            value={exportText} 
+            readOnly 
+            placeholder="Exported data will appear here"
+            style={{ width: '100%', height: '150px' }}
+          />
+          <br /><br />
+          <textarea 
+            value={importText} 
+            onChange={e => setImportText(e.target.value)} 
+            placeholder="Paste JSON here to import"
+            style={{ width: '100%', height: '150px' }}
+          />
+          <br />
+          <button onClick={handleImport}>3. Import Data</button>
         </div>
         
-        <Input placeholder="Type here..." className="mb-4" />
-        
-        <ListRow>
-          <Icon name="check" className="text-accent" />
-          <span className="text-text">Example Task 1</span>
-        </ListRow>
-        <ListRow>
-          <Icon name="circle" className="text-text-muted" />
-          <span className="text-text">Example Task 2</span>
-        </ListRow>
-      </Card>
-
-      <Sheet isOpen={sheetOpen} onClose={() => setSheetOpen(false)}>
-        <h3 className="font-bold mb-2">Bottom Sheet</h3>
-        <p className="text-text-muted mb-4">This is composed from primitives.</p>
-        <Button onClick={() => setSheetOpen(false)}>Close</Button>
-      </Sheet>
-
-      <Dialog isOpen={dialogOpen} onClose={() => setDialogOpen(false)}>
-        <h3 className="font-bold mb-2">Modal Dialog</h3>
-        <p className="text-text-muted mb-4">Also a basic primitive.</p>
-        <Button onClick={() => setDialogOpen(false)} className="w-full">Done</Button>
-      </Dialog>
+        <div style={{ flex: 1, height: '400px', overflowY: 'auto', border: '1px solid #ccc', padding: '10px' }}>
+          <h3>Local Cache</h3>
+          <h4>Folders ({folders.length})</h4>
+          <pre style={{ fontSize: '12px' }}>{JSON.stringify(folders, null, 2)}</pre>
+          <h4>Items ({items.length})</h4>
+          <pre style={{ fontSize: '12px' }}>{JSON.stringify(items, null, 2)}</pre>
+        </div>
+      </div>
     </div>
-  )
+  );
 }
 
 export default App;

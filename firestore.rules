@@ -1,0 +1,81 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isMember(memberIds) {
+      return isSignedIn() && request.auth.uid in memberIds;
+    }
+    
+    function isOwner(ownerId) {
+      return isSignedIn() && request.auth.uid == ownerId;
+    }
+    
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    match /folders/{folderId} {
+      allow read: if isMember(resource.data.memberIds);
+      
+      allow create: if isMember(request.resource.data.memberIds) 
+                    && isOwner(request.resource.data.ownerId);
+                    
+      allow update: if isMember(resource.data.memberIds)
+                    && isMember(request.resource.data.memberIds)
+                    // Editor cannot change roles or delete folder
+                    // Here we simplify: only owner can change roles/memberIds
+                    && (
+                      (resource.data.roles[request.auth.uid] == 'owner') 
+                      || 
+                      (
+                        request.resource.data.roles == resource.data.roles &&
+                        request.resource.data.memberIds == resource.data.memberIds &&
+                        request.resource.data.ownerId == resource.data.ownerId
+                      )
+                    );
+                    
+      allow delete: if isMember(resource.data.memberIds) 
+                    && resource.data.roles[request.auth.uid] == 'owner';
+    }
+    
+    match /items/{itemId} {
+      function getParent(parentId) {
+        return get(/databases/$(database)/documents/items/$(parentId)).data;
+      }
+      
+      allow read: if isMember(resource.data.memberIds);
+      
+      allow create: if isMember(request.resource.data.memberIds)
+                    // Depth check: if parentId != null, parent exists and parent's parentId == null
+                    && (request.resource.data.parentId == null || (
+                        exists(/databases/$(database)/documents/items/$(request.resource.data.parentId)) &&
+                        getParent(request.resource.data.parentId).parentId == null
+                    ))
+                    // Reminder invariant: if shared, reminder == null
+                    && (request.resource.data.memberIds.size() <= 1 || !("reminder" in request.resource.data) || request.resource.data.reminder == null)
+                    // Subtasks inherit folderId/memberIds/ownerId
+                    && (request.resource.data.parentId == null || (
+                        request.resource.data.folderId == getParent(request.resource.data.parentId).folderId &&
+                        request.resource.data.memberIds == getParent(request.resource.data.parentId).memberIds &&
+                        request.resource.data.ownerId == getParent(request.resource.data.parentId).ownerId
+                    ));
+                    
+      allow update: if isMember(resource.data.memberIds)
+                    && isMember(request.resource.data.memberIds)
+                    // Depth check for move
+                    && (request.resource.data.parentId == null || (
+                        exists(/databases/$(database)/documents/items/$(request.resource.data.parentId)) &&
+                        getParent(request.resource.data.parentId).parentId == null
+                    ))
+                    // Reminder invariant
+                    && (request.resource.data.memberIds.size() <= 1 || !("reminder" in request.resource.data) || request.resource.data.reminder == null);
+                    
+      allow delete: if isMember(resource.data.memberIds);
+    }
+  }
+}
