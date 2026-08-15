@@ -1,32 +1,33 @@
 import { collection, getDocs, doc, writeBatch, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { UserSchema, FolderSchema, ItemSchema } from './schema';
-import type { User, Folder, Item } from './schema';
+import type { Item } from './schema';
 
 const BATCH_LIMIT = 500;
 
 export interface ExportData {
-  users: Record<string, any>;
-  folders: Record<string, any>;
-  items: Record<string, any>;
+  users: Record<string, Record<string, unknown>>;
+  folders: Record<string, Record<string, unknown>>;
+  items: Record<string, Record<string, unknown>>;
 }
 
-function serializeTimestamp(ts: any) {
+function serializeTimestamp(ts: unknown) {
   if (ts instanceof Timestamp) {
     return { _seconds: ts.seconds, _nanoseconds: ts.nanoseconds };
   }
   return ts;
 }
 
-function deserializeTimestamp(obj: any) {
+function deserializeTimestamp(obj: unknown) {
   if (obj && typeof obj === 'object' && '_seconds' in obj && '_nanoseconds' in obj) {
-    return new Timestamp(obj._seconds, obj._nanoseconds);
+    const record = obj as { _seconds: number; _nanoseconds: number };
+    return new Timestamp(record._seconds, record._nanoseconds);
   }
   return obj;
 }
 
-function mapValues<T>(obj: Record<string, any>, mapper: (val: any) => any): T {
-  const result: any = {};
+function mapValues<T>(obj: Record<string, unknown>, mapper: (val: unknown) => unknown): T {
+  const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value === null) {
       result[key] = null;
@@ -41,16 +42,16 @@ function mapValues<T>(obj: Record<string, any>, mapper: (val: any) => any): T {
   return result as T;
 }
 
-function processTimestampsForExport(data: any): any {
-  return mapValues(data, (val) => {
+function processTimestampsForExport(data: unknown): unknown {
+  return mapValues(data as Record<string, unknown>, (val) => {
     if (val instanceof Timestamp) return serializeTimestamp(val);
     if (typeof val === 'object' && val !== null) return processTimestampsForExport(val);
     return val;
   });
 }
 
-function processTimestampsForImport(data: any): any {
-  return mapValues(data, (val) => {
+function processTimestampsForImport(data: unknown): unknown {
+  return mapValues(data as Record<string, unknown>, (val) => {
     if (val && typeof val === 'object' && '_seconds' in val && '_nanoseconds' in val) {
       return deserializeTimestamp(val);
     }
@@ -59,8 +60,8 @@ function processTimestampsForImport(data: any): any {
   });
 }
 
-function sortObjectKeys(obj: Record<string, any>): Record<string, any> {
-  const sorted: Record<string, any> = {};
+function sortObjectKeys(obj: Record<string, Record<string, unknown>>): Record<string, Record<string, unknown>> {
+  const sorted: Record<string, Record<string, unknown>> = {};
   Object.keys(obj).sort().forEach(key => {
     sorted[key] = obj[key];
   });
@@ -79,12 +80,12 @@ export async function exportData(): Promise<string> {
   };
 
   usersSnap.docs.forEach(d => {
-    data.users[d.id] = processTimestampsForExport(d.data());
+    data.users[d.id] = processTimestampsForExport(d.data()) as Record<string, unknown>;
   });
 
   const validFolderIds = new Set<string>();
   foldersSnap.docs.forEach(d => {
-    data.folders[d.id] = processTimestampsForExport(d.data());
+    data.folders[d.id] = processTimestampsForExport(d.data()) as Record<string, unknown>;
     validFolderIds.add(d.id);
   });
   
@@ -97,7 +98,7 @@ export async function exportData(): Promise<string> {
     const isParentMissing = itemData.parentId !== null && !validItemIds.has(itemData.parentId);
     
     if (!isFolderMissing && !isParentMissing) {
-      data.items[d.id] = processTimestampsForExport(itemData);
+      data.items[d.id] = processTimestampsForExport(itemData) as Record<string, unknown>;
     }
   });
 
@@ -152,19 +153,7 @@ export async function importData(jsonString: string): Promise<void> {
   let currentBatch = writeBatch(db);
   let opCount = 0;
 
-  const addDocsToBatch = (coll: string, records: Record<string, any>) => {
-    for (const [id, val] of Object.entries(records)) {
-      const dataWithTs = processTimestampsForImport(val);
-      currentBatch.set(doc(db, coll, id), dataWithTs);
-      opCount++;
-      if (opCount === BATCH_LIMIT) {
-        // Need to be async here, we'll collect the commits instead
-      }
-    }
-  };
-
-  // We rewrite the batching logic for sequential awaiting
-  const allOps: { coll: string, id: string, data: any }[] = [];
+  const allOps: { coll: string; id: string; data: unknown }[] = [];
   
   if (parsed.users) {
     Object.entries(parsed.users).forEach(([id, val]) => allOps.push({ coll: 'users', id, data: val }));
@@ -177,7 +166,7 @@ export async function importData(jsonString: string): Promise<void> {
   }
 
   for (const op of allOps) {
-    const dataWithTs = processTimestampsForImport(op.data);
+    const dataWithTs = processTimestampsForImport(op.data) as Record<string, unknown>;
     currentBatch.set(doc(db, op.coll, op.id), dataWithTs);
     opCount++;
     if (opCount === BATCH_LIMIT) {

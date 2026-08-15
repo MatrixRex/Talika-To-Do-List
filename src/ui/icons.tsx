@@ -1,4 +1,24 @@
-import { Folder, Inbox, CheckCircle, Circle, MoreVertical, Plus, Search, ChevronRight, ChevronDown, Share, Settings } from 'lucide-react';
+import {
+  Folder,
+  Inbox,
+  CheckCircle,
+  Circle,
+  MoreVertical,
+  Plus,
+  Search,
+  ChevronRight,
+  ChevronDown,
+  Share,
+  Settings,
+  Copy,
+  ArrowUpRight,
+  Trash2,
+  Pencil,
+  ArrowLeft,
+  CornerDownRight,
+  FolderPlus,
+  ArrowRight
+} from 'lucide-react';
 
 export const ICONS = {
   folder: Folder,
@@ -12,6 +32,14 @@ export const ICONS = {
   chevronDown: ChevronDown,
   share: Share,
   settings: Settings,
+  copy: Copy,
+  arrowUpRight: ArrowUpRight,
+  trash: Trash2,
+  edit: Pencil,
+  arrowLeft: ArrowLeft,
+  cornerDownRight: CornerDownRight,
+  folderPlus: FolderPlus,
+  arrowRight: ArrowRight,
 };
 
 export type IconName = keyof typeof ICONS;

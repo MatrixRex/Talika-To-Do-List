@@ -8,11 +8,12 @@ export default {
     // Delete default colours and only allow semantic ones
     colors: {
       surface: 'var(--surface)',
+      'surface-active': 'var(--surface-active)',
       'text-muted': 'var(--text-muted)',
       accent: 'var(--accent)',
+      danger: 'var(--danger)',
       transparent: 'transparent',
       current: 'currentColor',
-      // We might need a base text color or background color for body
       background: 'var(--background)',
       text: 'var(--text)',
     },
@@ -41,7 +42,17 @@ export default {
         3: 'var(--space-3)',
         4: 'var(--space-4)',
         6: 'var(--space-6)',
-      }
+        touch: 'var(--touch-target)',
+      },
+      minHeight: {
+        touch: 'var(--touch-target)',
+        header: 'var(--size-header)',
+        card: 'var(--size-card)',
+      },
+      minWidth: {
+        touch: 'var(--touch-target)',
+        menu: 'var(--size-menu)',
+      },
     },
   },
   plugins: [],

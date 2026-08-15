@@ -1,7 +1,9 @@
 @import '@radix-ui/colors/gray.css';
 @import '@radix-ui/colors/blue.css';
+@import '@radix-ui/colors/red.css';
 @import '@radix-ui/colors/gray-dark.css';
 @import '@radix-ui/colors/blue-dark.css';
+@import '@radix-ui/colors/red-dark.css';
 
 @tailwind base;
 @tailwind components;
@@ -14,8 +16,10 @@
     
     /* Semantic — components use ONLY these */
     --surface: var(--gray-2);
+    --surface-active: var(--gray-4);
     --text-muted: var(--gray-11);
     --accent: var(--blue-9);
+    --danger: var(--red-9);
 
     /* Fixed scales */
     --radius-sm: 6px;
@@ -34,9 +38,15 @@
     --space-3: 12px;
     --space-4: 16px;
     --space-6: 24px;
+
+    /* Sizing tokens */
+    --touch-target: 44px;
+    --size-header: 56px;
+    --size-card: 96px;
+    --size-menu: 140px;
   }
 
-  /* Basic dark mode overrides if needed */
+  /* Basic dark mode overrides */
   .dark {
     --background: var(--gray-1);
     --text: var(--gray-12);

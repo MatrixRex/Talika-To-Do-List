@@ -1,163 +1,158 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from './lib/firebase';
-import { exportData, wipeData, importData } from './lib/export-import';
-import { createItem, createFolder, orphanSweep } from './lib/db';
+import {
+  createItem,
+  createFolder,
+  orphanSweep,
+  deleteItem,
+  deleteFolder,
+  duplicateItem,
+  promoteSubtask,
+  moveItem
+} from './lib/db';
+import { generateKeyBetween } from './lib/sort-keys';
+import type { Item, Folder } from './lib/schema';
+import { HomeView } from './components/HomeView';
+import { FolderView } from './components/FolderView';
 import './App.css';
 
-function App() {
-  const [items, setItems] = useState<any[]>([]);
-  const [folders, setFolders] = useState<any[]>([]);
-  const [exportText, setExportText] = useState('');
-  const [importText, setImportText] = useState('');
-  const [status, setStatus] = useState('Connecting to Emulator...');
+export function App() {
+  const [items, setItems] = useState<Item[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Run orphan sweep on startup
     orphanSweep().catch(console.error);
-    
-    // Subscribe to collections
     const unsubItems = onSnapshot(collection(db, 'items'), (snap) => {
-      setItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setStatus('Connected');
-    }, (error) => {
-      setStatus(`Error: ${error.message}`);
+      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Item)));
     });
-    
     const unsubFolders = onSnapshot(collection(db, 'folders'), (snap) => {
-      setFolders(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setFolders(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Folder)));
     });
-    
     return () => {
       unsubItems();
       unsubFolders();
     };
   }, []);
 
-  const handleExport = async () => {
-    try {
-      const text = await exportData();
-      setExportText(text);
-      setStatus('Export complete');
-    } catch (e: any) {
-      setStatus(`Export failed: ${e.message}`);
-    }
+  // Folder actions
+  const handleCreateFolder = async (name: string) => {
+    const lastKey = folders.length > 0 ? folders[folders.length - 1].sortKey : null;
+    const sortKey = generateKeyBetween(lastKey, null);
+    await createFolder({
+      id: crypto.randomUUID(),
+      ownerId: 'user-1',
+      name,
+      icon: 'folder',
+      color: 'blue',
+      sortKey,
+      memberIds: ['user-1'],
+      roles: { 'user-1': 'owner' },
+    });
   };
 
-  const handleWipe = async () => {
-    try {
-      await wipeData();
-      setStatus('Data wiped');
-      setExportText('');
-    } catch (e: any) {
-      setStatus(`Wipe failed: ${e.message}`);
-    }
+  const handleRenameFolder = async (id: string, name: string) => {
+    await updateDoc(doc(db, 'folders', id), { name, updatedAt: Timestamp.now() });
   };
 
-  const handleImport = async () => {
-    try {
-      if (!importText) {
-        setStatus('Nothing to import');
-        return;
-      }
-      await importData(importText);
-      setStatus('Import complete');
-    } catch (e: any) {
-      setStatus(`Import failed: ${e.message}`);
-    }
-  };
-  
-  const handleAddFolder = async () => {
-    try {
-      await createFolder({
-        ownerId: 'user-1',
-        name: 'Test Folder ' + Math.floor(Math.random() * 1000),
-        icon: 'folder',
-        color: 'blue',
-        sortKey: 'a0',
-        memberIds: ['user-1'],
-        roles: { 'user-1': 'owner' }
-      });
-      setStatus('Folder added');
-    } catch (e: any) {
-      setStatus(`Error adding folder: ${e.message}`);
-    }
+  const handleDeleteFolder = async (id: string) => {
+    if (activeFolderId === id) setActiveFolderId(null);
+    await deleteFolder(id);
   };
 
-  const handleAddTask = async (folderId: string | null = null, parentId: string | null = null) => {
-    try {
-      let memberIds = ['user-1'];
-      if (folderId) {
-        const folder = folders.find(f => f.id === folderId);
-        if (folder) memberIds = folder.memberIds;
-      }
-      
-      await createItem({
-        folderId,
-        parentId,
-        ownerId: 'user-1',
-        memberIds,
-        title: 'Test Task ' + Math.floor(Math.random() * 1000),
-        done: false,
-        completedAt: null,
-        reminder: null,
-        updatedBy: 'user-1'
-      });
-      setStatus('Task added');
-    } catch (e: any) {
-      setStatus(`Error adding task: ${e.message}`);
-    }
+  // Task actions
+  const activeFolder = folders.find((f) => f.id === activeFolderId) || null;
+
+  const handleCreateTask = async (title: string, parentId?: string) => {
+    const targetFolderId = parentId
+      ? items.find((i) => i.id === parentId)?.folderId ?? activeFolderId
+      : activeFolderId;
+    const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) : null;
+    const memberIds = targetFolder ? targetFolder.memberIds : ['user-1'];
+
+    await createItem({
+      id: crypto.randomUUID(),
+      folderId: targetFolderId,
+      parentId: parentId || null,
+      ownerId: 'user-1',
+      memberIds,
+      title,
+      done: false,
+      completedAt: null,
+      reminder: null,
+      updatedBy: 'user-1',
+    });
+  };
+
+  const handleCompleteTask = async (id: string, done: boolean) => {
+    const now = Timestamp.now();
+    await updateDoc(doc(db, 'items', id), {
+      done,
+      completedAt: done ? now : null,
+      updatedAt: now,
+    });
+  };
+
+  const handleRenameTask = async (id: string, title: string) => {
+    await updateDoc(doc(db, 'items', id), {
+      title,
+      updatedAt: Timestamp.now(),
+    });
+  };
+
+  const handleDeleteTask = async (id: string) => {
+    await deleteItem(id);
+  };
+
+  const handleDuplicateTask = async (id: string) => {
+    await duplicateItem(id);
+  };
+
+  const handlePromoteSubtask = async (id: string) => {
+    await promoteSubtask(id);
+  };
+
+  const handleMoveToFolder = async (itemId: string, targetFolderId: string | null) => {
+    await moveItem(itemId, targetFolderId, 'user-1');
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <h1>To-Do Stage 1: Emulator Debug</h1>
-      <p><strong>Status:</strong> {status}</p>
-      
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        <button onClick={handleAddFolder}>Add Folder</button>
-        <button onClick={() => handleAddTask(null, null)}>Add Default Task</button>
-        {folders.length > 0 && (
-          <button onClick={() => handleAddTask(folders[0].id, null)}>Add Task in Folder</button>
-        )}
-        {items.filter(i => !i.parentId).length > 0 && (
-          <button onClick={() => handleAddTask(null, items.find(i => !i.parentId)?.id)}>Add Subtask</button>
-        )}
-        <button onClick={() => orphanSweep().then(() => setStatus('Sweep done'))}>Force Orphan Sweep</button>
-      </div>
-      
-      <div style={{ display: 'flex', gap: '20px' }}>
-        <div style={{ flex: 1 }}>
-          <h3>Export / Wipe / Import</h3>
-          <button onClick={handleExport}>1. Export Data</button>
-          <button onClick={handleWipe}>2. Wipe Data</button>
-          <br /><br />
-          <textarea 
-            value={exportText} 
-            readOnly 
-            placeholder="Exported data will appear here"
-            style={{ width: '100%', height: '150px' }}
-          />
-          <br /><br />
-          <textarea 
-            value={importText} 
-            onChange={e => setImportText(e.target.value)} 
-            placeholder="Paste JSON here to import"
-            style={{ width: '100%', height: '150px' }}
-          />
-          <br />
-          <button onClick={handleImport}>3. Import Data</button>
-        </div>
-        
-        <div style={{ flex: 1, height: '400px', overflowY: 'auto', border: '1px solid #ccc', padding: '10px' }}>
-          <h3>Local Cache</h3>
-          <h4>Folders ({folders.length})</h4>
-          <pre style={{ fontSize: '12px' }}>{JSON.stringify(folders, null, 2)}</pre>
-          <h4>Items ({items.length})</h4>
-          <pre style={{ fontSize: '12px' }}>{JSON.stringify(items, null, 2)}</pre>
-        </div>
-      </div>
-    </div>
+    <main className="h-screen w-screen overflow-hidden bg-background text-text">
+      {activeFolder ? (
+        <FolderView
+          folder={activeFolder}
+          items={items}
+          folders={folders}
+          onBack={() => setActiveFolderId(null)}
+          onCreateTask={handleCreateTask}
+          onCompleteTask={handleCompleteTask}
+          onRenameTask={handleRenameTask}
+          onDeleteTask={handleDeleteTask}
+          onDuplicateTask={handleDuplicateTask}
+          onPromoteSubtask={handlePromoteSubtask}
+          onMoveToFolder={handleMoveToFolder}
+          onRenameFolder={handleRenameFolder}
+          onDeleteFolder={handleDeleteFolder}
+        />
+      ) : (
+        <HomeView
+          items={items}
+          folders={folders}
+          onSelectFolder={setActiveFolderId}
+          onCreateTask={handleCreateTask}
+          onCompleteTask={handleCompleteTask}
+          onRenameTask={handleRenameTask}
+          onDeleteTask={handleDeleteTask}
+          onDuplicateTask={handleDuplicateTask}
+          onPromoteSubtask={handlePromoteSubtask}
+          onMoveToFolder={handleMoveToFolder}
+          onCreateFolder={handleCreateFolder}
+          onRenameFolder={handleRenameFolder}
+          onDeleteFolder={handleDeleteFolder}
+        />
+      )}
+    </main>
   );
 }
 
