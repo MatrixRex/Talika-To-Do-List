@@ -22,7 +22,6 @@ describe('UnifiedInput', () => {
         mode="Create"
         onModeChange={onModeChange}
         onSubmit={onSubmit}
-        matchCount={0}
       />
     );
 
@@ -43,7 +42,6 @@ describe('UnifiedInput', () => {
         mode="Create"
         onModeChange={onModeChange}
         onSubmit={onSubmit}
-        matchCount={0}
       />
     );
 
@@ -67,7 +65,6 @@ describe('UnifiedInput', () => {
         mode="Create"
         onModeChange={onModeChange}
         onSubmit={onSubmit}
-        matchCount={0}
       />
     );
 

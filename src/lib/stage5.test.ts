@@ -5,7 +5,6 @@ import {
   getContextModes,
   getDefaultModeForContext,
   getModePlaceholder,
-  calculateMatchCount,
   filterItemsBySearch,
   cycleNextMode,
   cyclePrevMode,
@@ -102,36 +101,7 @@ describe('Stage 5: Unified Input & Context Rules (Exit Suite)', () => {
     });
   });
 
-  describe('4. Cross-Mode Match Hint (§8)', () => {
-    const mockItems: Item[] = [
-      createMockItem({ id: '1', title: 'Buy groceries milk', folderId: null }),
-      createMockItem({ id: '2', title: 'Buy eggs and milk', folderId: null }),
-      createMockItem({ id: '3', title: 'Call mechanic', folderId: null }),
-      createMockItem({ id: '4', title: 'Milk the cow', folderId: 'folder-work' }),
-      createMockItem({ id: '5', title: 'Chocolate milk', parentId: '3', folderId: null }),
-    ];
 
-    it('calculates global match count on Home view', () => {
-      const homeContext: AppContext = { folderId: null, parentId: null };
-      expect(calculateMatchCount('milk', mockItems, homeContext)).toBe(4);
-      expect(calculateMatchCount('mechanic', mockItems, homeContext)).toBe(1);
-      expect(calculateMatchCount('nonexistent', mockItems, homeContext)).toBe(0);
-      expect(calculateMatchCount('', mockItems, homeContext)).toBe(0);
-      expect(calculateMatchCount('   ', mockItems, homeContext)).toBe(0);
-    });
-
-    it('calculates folder-scoped match count in Folder view', () => {
-      const folderContext: AppContext = { folderId: 'folder-work', parentId: null };
-      expect(calculateMatchCount('milk', mockItems, folderContext)).toBe(1);
-      expect(calculateMatchCount('groceries', mockItems, folderContext)).toBe(0);
-    });
-
-    it('search scope follows screen, not selection (selecting task does not narrow scope)', () => {
-      const homeWithSelection: AppContext = { folderId: null, parentId: '3' };
-      // Scope is still global because screen is Home
-      expect(calculateMatchCount('milk', mockItems, homeWithSelection)).toBe(4);
-    });
-  });
 
   describe('5. Substring Search Filtering (§8)', () => {
     const mockItems: Item[] = [

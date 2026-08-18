@@ -259,9 +259,6 @@ requiring them would cost two taps and a layout repaint per use.
   subtask… / Search…*
 - **The query is preserved across mode switches.** Typing "groceries" in Create
   and switching to Search must keep the text.
-- Search runs silently in every mode. In Create mode, if the text matches
-  existing items, show a dismissible row: *"3 matching tasks →"* which jumps to
-  Search with the query intact.
 - Swipe left/right on the input bar cycles modes.
 - Mode resets to Create (or Subtask) whenever the context changes. Never persist
   the last mode.
@@ -435,8 +432,7 @@ delete on A while B edits offline → deterministic, no zombie · airplane mode
 5. **Concurrent Offline Creates & Ordering:** UUIDs prevent ID collisions; `generateKeyBetween` + deterministic `compareSortKeys` (`sortKey`, `id`) ensures stable position across all devices.
 
 ### Stage 5 — Unified input
-Segmented control, mode matrix from §6, preserved query, cross-mode match hint,
-swipe to cycle. Desktop accelerators.
+Segmented control, mode matrix from §6, preserved query, swipe to cycle. Desktop accelerators.
 
 **Exit:** query survives all mode transitions · mode switch is one tap · titles
 containing literal `#`, `/`, `@` save correctly on mobile · keystroke-to-render

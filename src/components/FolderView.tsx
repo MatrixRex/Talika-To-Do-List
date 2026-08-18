@@ -2,8 +2,6 @@ import { useState, useMemo, useEffect } from 'react';
 import type { Folder, Item, Reminder } from '../lib/schema';
 import { compareSortKeys } from '../lib/sort-keys';
 import { calculateReorderKey } from '../lib/reorder';
-import {
-  calculateMatchCount,
   getDefaultModeForContext,
   type InputMode,
   type AppContext
@@ -130,10 +128,6 @@ export function FolderView({
       .filter((i) => i.parentId === parentId)
       .sort(compareSortKeys);
   };
-
-  const matchCount = useMemo(() => {
-    return calculateMatchCount(query, items, context);
-  }, [query, items, context]);
 
   const handleSelectTask = (id: string) => {
     setSelectedTaskId((prev) => (prev === id ? null : id));
@@ -318,7 +312,6 @@ export function FolderView({
         mode={mode}
         onModeChange={setMode}
         onSubmit={handleSubmit}
-        matchCount={matchCount}
         parentTaskTitle={selectedParentTask?.title}
         onDeselectParent={() => setSelectedTaskId(null)}
       />

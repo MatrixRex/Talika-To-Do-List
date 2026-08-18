@@ -66,20 +66,6 @@ export function cyclePrevMode(currentMode: InputMode, availableModes: InputMode[
   return availableModes[prevIndex];
 }
 
-/**
- * Calculates match count for cross-mode hint (§8).
- * Search scope follows the screen (global if folderId == null, folder-scoped if folderId != null).
- */
-export function calculateMatchCount(query: string, items: Item[], context: AppContext): number {
-  const trimmed = query.trim().toLowerCase();
-  if (!trimmed) return 0;
-
-  const scopedItems = context.folderId === null
-    ? items
-    : items.filter(i => i.folderId === context.folderId);
-
-  return scopedItems.filter(i => i.title.toLowerCase().includes(trimmed)).length;
-}
 
 export interface SearchResults {
   matchingTasks: Item[];

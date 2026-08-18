@@ -17,7 +17,6 @@ interface UnifiedInputProps {
   mode: InputMode;
   onModeChange: (mode: InputMode) => void;
   onSubmit: (text: string, mode: InputMode) => void;
-  matchCount: number;
   parentTaskTitle?: string | null;
   onDeselectParent?: () => void;
 }
@@ -29,19 +28,12 @@ export function UnifiedInput({
   mode,
   onModeChange,
   onSubmit,
-  matchCount,
   parentTaskTitle,
   onDeselectParent,
 }: UnifiedInputProps) {
   const availableModes = getContextModes(context);
-  const [isHintDismissed, setIsHintDismissed] = useState(false);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Reset hint dismissal whenever query changes
-  useEffect(() => {
-    setIsHintDismissed(false);
-  }, [query]);
 
   // Global desktop accelerators (§8 & §9)
   useEffect(() => {
@@ -133,12 +125,6 @@ export function UnifiedInput({
     }
   };
 
-  const showMatchHint =
-    mode === 'Create' &&
-    query.trim().length > 0 &&
-    matchCount > 0 &&
-    !isHintDismissed;
-
   const getSubmitIconName = () => {
     switch (mode) {
       case 'Folder':
@@ -175,29 +161,6 @@ export function UnifiedInput({
               <Icon name="x" />
             </IconButton>
           )}
-        </div>
-      )}
-
-      {/* Cross-Mode Match Hint (§8) */}
-      {showMatchHint && (
-        <div className="flex items-center justify-between px-4 py-1.5 bg-surface text-text text-xs border-b border-surface">
-          <button
-            type="button"
-            className="flex items-center gap-1.5 text-accent font-medium hover:opacity-80 transition-opacity duration-fast cursor-pointer"
-            onClick={() => onModeChange('Search')}
-          >
-            <Icon name="search" />
-            <span>
-              {matchCount} matching {matchCount === 1 ? 'task' : 'tasks'} →
-            </span>
-          </button>
-          <IconButton
-            aria-label="Dismiss match hint"
-            onClick={() => setIsHintDismissed(true)}
-            className="p-1 min-h-0 min-w-0 text-text-muted hover:text-text"
-          >
-            <Icon name="x" />
-          </IconButton>
         </div>
       )}
 
