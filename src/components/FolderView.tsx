@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import type { Folder, Item } from '../lib/schema';
+import type { Folder, Item, Reminder } from '../lib/schema';
 import { compareSortKeys } from '../lib/sort-keys';
 import {
   calculateMatchCount,
@@ -27,6 +27,7 @@ interface FolderViewProps {
   onMoveToFolder: (itemId: string, targetFolderId: string | null) => void;
   onRenameFolder: (id: string, newName: string) => void;
   onDeleteFolder: (id: string) => void;
+  onSetReminder?: (itemId: string, reminder: Reminder | null) => void;
 }
 
 export function FolderView({
@@ -42,7 +43,8 @@ export function FolderView({
   onPromoteSubtask,
   onMoveToFolder,
   onRenameFolder,
-  onDeleteFolder
+  onDeleteFolder,
+  onSetReminder
 }: FolderViewProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -173,6 +175,7 @@ export function FolderView({
           onPromoteSubtask={onPromoteSubtask}
           onMoveToFolder={onMoveToFolder}
           onCreateTask={onCreateTask}
+          onSetReminder={onSetReminder}
         />
       ) : (
         /* Task List */
@@ -198,6 +201,7 @@ export function FolderView({
                   onAddSubtask={(parentId, title) => onCreateTask(title, parentId)}
                   onPromoteSubtask={onPromoteSubtask}
                   onMoveToFolder={onMoveToFolder}
+                  onSetReminder={onSetReminder}
                 />
               ))}
             </div>

@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import type { Item, Folder } from '../lib/schema';
+import type { Item, Folder, Reminder } from '../lib/schema';
 import { ListRow, Button, Input, Dialog, Menu, MenuItem, IconButton } from '../ui';
 import { Icon } from '../ui/icons';
 import { SubtaskItem } from './SubtaskItem';
+import { ReminderDialog } from './ReminderDialog';
+import { formatReminder } from '../lib/recurrence';
 
 interface TaskItemProps {
   item: Item;
@@ -17,6 +19,7 @@ interface TaskItemProps {
   onAddSubtask: (parentId: string, title: string) => void;
   onPromoteSubtask: (id: string) => void;
   onMoveToFolder: (itemId: string, targetFolderId: string | null) => void;
+  onSetReminder?: (itemId: string, reminder: Reminder | null) => void;
 }
 
 export function TaskItem({
@@ -31,7 +34,8 @@ export function TaskItem({
   onDuplicate,
   onAddSubtask,
   onPromoteSubtask,
-  onMoveToFolder
+  onMoveToFolder,
+  onSetReminder,
 }: TaskItemProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -42,6 +46,8 @@ export function TaskItem({
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
 
   const [isMoveOpen, setIsMoveOpen] = useState(false);
+  const [isReminderOpen, setIsReminderOpen] = useState(false);
+  const [pendingMoveTarget, setPendingMoveTarget] = useState<{ id: string | null; name: string } | null>(null);
 
   const handleRename = () => {
     if (renameValue.trim() && renameValue !== item.title) {
@@ -56,6 +62,29 @@ export function TaskItem({
       setNewSubtaskTitle('');
       setIsAddSubtaskOpen(false);
       setIsExpanded(true);
+    }
+  };
+
+  const handleSelectMoveFolder = (targetFolderId: string | null) => {
+    setIsMoveOpen(false);
+    const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) : null;
+    const isTargetShared = targetFolder && targetFolder.memberIds.length > 1;
+
+    if (item.reminder && isTargetShared) {
+      // Prompt warning confirmation
+      setPendingMoveTarget({
+        id: targetFolderId,
+        name: targetFolder?.name || 'Shared Folder',
+      });
+    } else {
+      onMoveToFolder(item.id, targetFolderId);
+    }
+  };
+
+  const confirmMoveIntoShared = () => {
+    if (pendingMoveTarget) {
+      onMoveToFolder(item.id, pendingMoveTarget.id);
+      setPendingMoveTarget(null);
     }
   };
 
@@ -99,9 +128,9 @@ export function TaskItem({
           <Icon name={item.done ? 'check' : 'circle'} className={item.done ? 'text-accent' : 'text-text-muted'} />
         </IconButton>
 
-        {/* Task Title */}
+        {/* Task Title & Badges */}
         <div
-          className="flex-1 min-w-0 flex items-center gap-2"
+          className="flex-1 min-w-0 flex items-center gap-2 flex-wrap"
           onClick={(e) => {
             if (onSelect) {
               e.stopPropagation();
@@ -112,9 +141,19 @@ export function TaskItem({
           <span className={`truncate ${item.done ? 'line-through text-text-muted' : 'text-text'}`}>
             {item.title}
           </span>
+
+          {/* Subtask count */}
           {subtasks.length > 0 && !isExpanded && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-surface text-text-muted shrink-0">
               {subtasks.filter(s => s.done).length}/{subtasks.length}
+            </span>
+          )}
+
+          {/* Reminder Badge */}
+          {item.reminder && (
+            <span className="flex items-center gap-1 text-xs text-accent px-2 py-0.5 rounded-full bg-surface shrink-0 font-medium">
+              <Icon name="bell" className="text-accent" />
+              <span>{formatReminder(item.reminder)}</span>
             </span>
           )}
         </div>
@@ -126,6 +165,19 @@ export function TaskItem({
           </IconButton>
           <Menu isOpen={menuOpen} onClose={() => setMenuOpen(false)}>
             <div className="flex flex-col">
+              {/* Invariant 5: Reminders are private-only (memberIds.length === 1) */}
+              {item.memberIds.length === 1 && onSetReminder && (
+                <MenuItem
+                  icon={<Icon name="bell" />}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setIsReminderOpen(true);
+                  }}
+                >
+                  {item.reminder ? 'Edit reminder' : 'Set reminder'}
+                </MenuItem>
+              )}
+
               <MenuItem
                 icon={<Icon name="edit" />}
                 onClick={() => {
@@ -197,6 +249,16 @@ export function TaskItem({
         </div>
       )}
 
+      {/* Reminder Dialog */}
+      {onSetReminder && (
+        <ReminderDialog
+          isOpen={isReminderOpen}
+          onClose={() => setIsReminderOpen(false)}
+          currentReminder={item.reminder}
+          onSave={(newReminder) => onSetReminder(item.id, newReminder)}
+        />
+      )}
+
       {/* Rename Dialog */}
       <Dialog isOpen={isRenameOpen} onClose={() => setIsRenameOpen(false)}>
         <h3 className="text-lg font-bold mb-4 text-text">Rename Task</h3>
@@ -234,10 +296,7 @@ export function TaskItem({
         <div className="flex flex-col gap-1 max-h-60 overflow-y-auto">
           <ListRow
             className={item.folderId === null ? 'bg-surface' : ''}
-            onClick={() => {
-              onMoveToFolder(item.id, null);
-              setIsMoveOpen(false);
-            }}
+            onClick={() => handleSelectMoveFolder(null)}
           >
             <Icon name="inbox" className="text-text-muted" />
             <span className="flex-1 truncate">Default Inbox</span>
@@ -246,10 +305,7 @@ export function TaskItem({
             <ListRow
               key={folder.id}
               className={item.folderId === folder.id ? 'bg-surface' : ''}
-              onClick={() => {
-                onMoveToFolder(item.id, folder.id);
-                setIsMoveOpen(false);
-              }}
+              onClick={() => handleSelectMoveFolder(folder.id)}
             >
               <Icon name="folder" className="text-accent" />
               <span className="flex-1 truncate">{folder.name}</span>
@@ -258,6 +314,27 @@ export function TaskItem({
         </div>
         <div className="flex justify-end mt-4">
           <Button variant="ghost" onClick={() => setIsMoveOpen(false)}>Cancel</Button>
+        </div>
+      </Dialog>
+
+      {/* Invariant 5: Move to shared folder warning dialog */}
+      <Dialog isOpen={pendingMoveTarget !== null} onClose={() => setPendingMoveTarget(null)}>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 text-danger">
+            <Icon name="bellOff" />
+            <h3 className="text-lg font-bold">Reminder will be removed</h3>
+          </div>
+          <p className="text-sm text-text-muted">
+            This task has a reminder. Moving it into a shared folder will remove it.
+          </p>
+          <div className="flex justify-end gap-2 mt-3">
+            <Button variant="ghost" onClick={() => setPendingMoveTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={confirmMoveIntoShared}>
+              Move & Remove Reminder
+            </Button>
+          </div>
         </div>
       </Dialog>
     </div>

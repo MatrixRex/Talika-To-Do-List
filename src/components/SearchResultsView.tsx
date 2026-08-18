@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { Item, Folder } from '../lib/schema';
+import type { Item, Folder, Reminder } from '../lib/schema';
 import { filterItemsBySearch, type AppContext } from '../lib/unified-input';
 import { ListRow, IconButton } from '../ui';
 import { Icon } from '../ui/icons';
@@ -21,6 +21,7 @@ interface SearchResultsViewProps {
   onPromoteSubtask: (id: string) => void;
   onMoveToFolder: (itemId: string, targetFolderId: string | null) => void;
   onCreateTask: (title: string, parentId?: string) => void;
+  onSetReminder?: (itemId: string, reminder: Reminder | null) => void;
 }
 
 export function SearchResultsView({
@@ -38,6 +39,7 @@ export function SearchResultsView({
   onPromoteSubtask,
   onMoveToFolder,
   onCreateTask,
+  onSetReminder,
 }: SearchResultsViewProps) {
   const searchResults = useMemo(() => {
     return filterItemsBySearch(query, items, folders, context);
@@ -136,6 +138,7 @@ export function SearchResultsView({
                 onAddSubtask={(parentId, title) => onCreateTask(title, parentId)}
                 onPromoteSubtask={onPromoteSubtask}
                 onMoveToFolder={onMoveToFolder}
+                onSetReminder={onSetReminder}
               />
             </div>
           ))}

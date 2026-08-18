@@ -15,7 +15,7 @@ import {
 import { db } from './firebase';
 import { generateKeyBetween } from './sort-keys';
 import { validateItemContext } from './schema';
-import type { Item, Folder } from './schema';
+import type { Item, Folder, Reminder } from './schema';
 
 const BATCH_LIMIT = 500;
 
@@ -356,4 +356,122 @@ export async function orphanSweep(): Promise<void> {
   } catch (e) {
     console.warn('Orphan sweep failed', e);
   }
+}
+
+export async function setReminder(
+  itemId: string,
+  reminder: Reminder | null,
+  actorId: string
+): Promise<void> {
+  const itemRef = doc(db, 'items', itemId);
+  const itemSnap = await getDoc(itemRef);
+  if (!itemSnap.exists()) throw new Error('Item not found');
+
+  const item = itemSnap.data() as Item;
+  const now = Timestamp.now();
+
+  if (reminder !== null) {
+    if (item.parentId !== null) {
+      throw new Error('Reminders are only allowed on top-level tasks');
+    }
+    if (item.memberIds.length > 1) {
+      throw new Error('Reminders are private-only');
+    }
+  }
+
+  let parentItem: Item | null = null;
+  if (item.parentId) {
+    const parentSnap = await getDoc(doc(db, 'items', item.parentId));
+    if (parentSnap.exists()) parentItem = parentSnap.data() as Item;
+  }
+
+  let folder: Folder | null = null;
+  if (item.folderId) {
+    const folderSnap = await getDoc(doc(db, 'folders', item.folderId));
+    if (folderSnap.exists()) folder = folderSnap.data() as Folder;
+  }
+
+  const updatedItem: Item = {
+    ...item,
+    reminder,
+    updatedAt: now,
+    updatedBy: actorId
+  };
+
+  validateItemContext(updatedItem, parentItem, folder);
+
+  await updateDoc(itemRef, {
+    reminder,
+    updatedAt: now,
+    updatedBy: actorId
+  });
+}
+
+export async function shareFolder(
+  folderId: string,
+  newMemberIds: string[],
+  actorId: string,
+  newRoles?: { [uid: string]: 'owner' | 'editor' }
+): Promise<{ strippedCount: number }> {
+  const folderRef = doc(db, 'folders', folderId);
+  const folderSnap = await getDoc(folderRef);
+  if (!folderSnap.exists()) throw new Error('Folder not found');
+
+  const folder = folderSnap.data() as Folder;
+  const now = Timestamp.now();
+
+  const isShared = newMemberIds.length > 1;
+
+  // Build roles mapping
+  const roles = newRoles || { ...folder.roles };
+  for (const memberId of newMemberIds) {
+    if (!roles[memberId]) {
+      roles[memberId] = memberId === folder.ownerId ? 'owner' : 'editor';
+    }
+  }
+
+  const itemsRef = collection(db, 'items');
+  const q = query(itemsRef, where('folderId', '==', folderId));
+  const snap = await getDocs(q);
+
+  let strippedCount = 0;
+  let currentBatch = writeBatch(db);
+  let opCount = 0;
+
+  // Update folder document
+  currentBatch.update(folderRef, {
+    memberIds: newMemberIds,
+    roles,
+    updatedAt: now
+  });
+  opCount++;
+
+  for (const itemDoc of snap.docs) {
+    const itemData = itemDoc.data() as Item;
+    const updates: Partial<Item> = {
+      memberIds: newMemberIds,
+      updatedAt: now,
+      updatedBy: actorId
+    };
+
+    if (isShared && itemData.reminder !== null) {
+      updates.reminder = null;
+      strippedCount++;
+    }
+
+    currentBatch.update(itemDoc.ref, updates);
+    opCount++;
+
+    if (opCount >= BATCH_LIMIT) {
+      await currentBatch.commit();
+      currentBatch = writeBatch(db);
+      opCount = 0;
+    }
+  }
+
+  if (opCount > 0) {
+    await currentBatch.commit();
+  }
+
+  return { strippedCount };
 }

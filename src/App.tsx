@@ -9,10 +9,12 @@ import {
   deleteFolder,
   duplicateItem,
   promoteSubtask,
-  moveItem
+  moveItem,
+  setReminder
 } from './lib/db';
 import { generateKeyBetween } from './lib/sort-keys';
-import type { Item, Folder } from './lib/schema';
+import type { Item, Folder, Reminder } from './lib/schema';
+import { rescheduleAllReminders } from './lib/notifications';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthBar } from './components/AuthBar';
 import { LoginView } from './components/LoginView';
@@ -56,6 +58,13 @@ function MainApp() {
       unsubFolders();
     };
   }, [firebaseUser]);
+
+  // Reschedule local notifications whenever items change
+  useEffect(() => {
+    if (items.length > 0) {
+      rescheduleAllReminders(items).catch(console.error);
+    }
+  }, [items]);
 
   if (loading) {
     return (
@@ -155,6 +164,10 @@ function MainApp() {
     await moveItem(itemId, targetFolderId, firebaseUser.uid);
   };
 
+  const handleSetReminder = async (itemId: string, reminder: Reminder | null) => {
+    await setReminder(itemId, reminder, firebaseUser.uid);
+  };
+
   return (
     <main className="h-screen w-screen flex flex-col overflow-hidden bg-background text-text">
       <AuthBar />
@@ -174,6 +187,7 @@ function MainApp() {
             onMoveToFolder={handleMoveToFolder}
             onRenameFolder={handleRenameFolder}
             onDeleteFolder={handleDeleteFolder}
+            onSetReminder={handleSetReminder}
           />
         ) : (
           <HomeView
@@ -190,6 +204,7 @@ function MainApp() {
             onCreateFolder={handleCreateFolder}
             onRenameFolder={handleRenameFolder}
             onDeleteFolder={handleDeleteFolder}
+            onSetReminder={handleSetReminder}
           />
         )}
       </div>
