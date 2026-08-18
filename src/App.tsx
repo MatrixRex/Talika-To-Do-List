@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from './lib/firebase';
 import {
   createItem,
@@ -13,28 +13,66 @@ import {
 } from './lib/db';
 import { generateKeyBetween } from './lib/sort-keys';
 import type { Item, Folder } from './lib/schema';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthBar } from './components/AuthBar';
+import { LoginView } from './components/LoginView';
 import { HomeView } from './components/HomeView';
 import { FolderView } from './components/FolderView';
 import './App.css';
 
-export function App() {
+function MainApp() {
+  const { firebaseUser, loading } = useAuth();
   const [items, setItems] = useState<Item[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!firebaseUser) {
+      setItems([]);
+      setFolders([]);
+      return;
+    }
+
     orphanSweep().catch(console.error);
-    const unsubItems = onSnapshot(collection(db, 'items'), (snap) => {
+
+    const qItems = query(
+      collection(db, 'items'),
+      where('memberIds', 'array-contains', firebaseUser.uid)
+    );
+    const unsubItems = onSnapshot(qItems, (snap) => {
       setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Item)));
     });
-    const unsubFolders = onSnapshot(collection(db, 'folders'), (snap) => {
+
+    const qFolders = query(
+      collection(db, 'folders'),
+      where('memberIds', 'array-contains', firebaseUser.uid)
+    );
+    const unsubFolders = onSnapshot(qFolders, (snap) => {
       setFolders(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Folder)));
     });
+
     return () => {
       unsubItems();
       unsubFolders();
     };
-  }, []);
+  }, [firebaseUser]);
+
+  if (loading) {
+    return (
+      <main className="h-screen w-screen flex items-center justify-center bg-background text-text-muted">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+          <p className="text-sm font-medium">Loading Talika…</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!firebaseUser) {
+    return <LoginView />;
+  }
+
+  const activeFolder = folders.find((f) => f.id === activeFolderId) || null;
 
   // Folder actions
   const handleCreateFolder = async (name: string) => {
@@ -42,13 +80,13 @@ export function App() {
     const sortKey = generateKeyBetween(lastKey, null);
     await createFolder({
       id: crypto.randomUUID(),
-      ownerId: 'user-1',
+      ownerId: firebaseUser.uid,
       name,
       icon: 'folder',
       color: 'blue',
       sortKey,
-      memberIds: ['user-1'],
-      roles: { 'user-1': 'owner' },
+      memberIds: [firebaseUser.uid],
+      roles: { [firebaseUser.uid]: 'owner' },
     });
   };
 
@@ -62,26 +100,24 @@ export function App() {
   };
 
   // Task actions
-  const activeFolder = folders.find((f) => f.id === activeFolderId) || null;
-
   const handleCreateTask = async (title: string, parentId?: string) => {
     const targetFolderId = parentId
       ? items.find((i) => i.id === parentId)?.folderId ?? activeFolderId
       : activeFolderId;
     const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) : null;
-    const memberIds = targetFolder ? targetFolder.memberIds : ['user-1'];
+    const memberIds = targetFolder ? targetFolder.memberIds : [firebaseUser.uid];
 
     await createItem({
       id: crypto.randomUUID(),
       folderId: targetFolderId,
       parentId: parentId || null,
-      ownerId: 'user-1',
+      ownerId: firebaseUser.uid,
       memberIds,
       title,
       done: false,
       completedAt: null,
       reminder: null,
-      updatedBy: 'user-1',
+      updatedBy: firebaseUser.uid,
     });
   };
 
@@ -91,6 +127,7 @@ export function App() {
       done,
       completedAt: done ? now : null,
       updatedAt: now,
+      updatedBy: firebaseUser.uid,
     });
   };
 
@@ -98,6 +135,7 @@ export function App() {
     await updateDoc(doc(db, 'items', id), {
       title,
       updatedAt: Timestamp.now(),
+      updatedBy: firebaseUser.uid,
     });
   };
 
@@ -114,45 +152,56 @@ export function App() {
   };
 
   const handleMoveToFolder = async (itemId: string, targetFolderId: string | null) => {
-    await moveItem(itemId, targetFolderId, 'user-1');
+    await moveItem(itemId, targetFolderId, firebaseUser.uid);
   };
 
   return (
-    <main className="h-screen w-screen overflow-hidden bg-background text-text">
-      {activeFolder ? (
-        <FolderView
-          folder={activeFolder}
-          items={items}
-          folders={folders}
-          onBack={() => setActiveFolderId(null)}
-          onCreateTask={handleCreateTask}
-          onCompleteTask={handleCompleteTask}
-          onRenameTask={handleRenameTask}
-          onDeleteTask={handleDeleteTask}
-          onDuplicateTask={handleDuplicateTask}
-          onPromoteSubtask={handlePromoteSubtask}
-          onMoveToFolder={handleMoveToFolder}
-          onRenameFolder={handleRenameFolder}
-          onDeleteFolder={handleDeleteFolder}
-        />
-      ) : (
-        <HomeView
-          items={items}
-          folders={folders}
-          onSelectFolder={setActiveFolderId}
-          onCreateTask={handleCreateTask}
-          onCompleteTask={handleCompleteTask}
-          onRenameTask={handleRenameTask}
-          onDeleteTask={handleDeleteTask}
-          onDuplicateTask={handleDuplicateTask}
-          onPromoteSubtask={handlePromoteSubtask}
-          onMoveToFolder={handleMoveToFolder}
-          onCreateFolder={handleCreateFolder}
-          onRenameFolder={handleRenameFolder}
-          onDeleteFolder={handleDeleteFolder}
-        />
-      )}
+    <main className="h-screen w-screen flex flex-col overflow-hidden bg-background text-text">
+      <AuthBar />
+      <div className="flex-1 overflow-hidden">
+        {activeFolder ? (
+          <FolderView
+            folder={activeFolder}
+            items={items}
+            folders={folders}
+            onBack={() => setActiveFolderId(null)}
+            onCreateTask={handleCreateTask}
+            onCompleteTask={handleCompleteTask}
+            onRenameTask={handleRenameTask}
+            onDeleteTask={handleDeleteTask}
+            onDuplicateTask={handleDuplicateTask}
+            onPromoteSubtask={handlePromoteSubtask}
+            onMoveToFolder={handleMoveToFolder}
+            onRenameFolder={handleRenameFolder}
+            onDeleteFolder={handleDeleteFolder}
+          />
+        ) : (
+          <HomeView
+            items={items}
+            folders={folders}
+            onSelectFolder={setActiveFolderId}
+            onCreateTask={handleCreateTask}
+            onCompleteTask={handleCompleteTask}
+            onRenameTask={handleRenameTask}
+            onDeleteTask={handleDeleteTask}
+            onDuplicateTask={handleDuplicateTask}
+            onPromoteSubtask={handlePromoteSubtask}
+            onMoveToFolder={handleMoveToFolder}
+            onCreateFolder={handleCreateFolder}
+            onRenameFolder={handleRenameFolder}
+            onDeleteFolder={handleDeleteFolder}
+          />
+        )}
+      </div>
     </main>
+  );
+}
+
+export function App() {
+  return (
+    <AuthProvider>
+      <MainApp />
+    </AuthProvider>
   );
 }
 

@@ -6,18 +6,20 @@ const TimestampSchema = z.custom<Timestamp>((val) => val instanceof Timestamp, {
   message: "Expected a Firestore Timestamp",
 });
 
+export const UserPrefsSchema = z.object({
+  hideCompletedTasks: z.boolean(),
+  hideCompletedSubtasks: z.boolean(),
+  rememberLastFolder: z.boolean(),
+});
+
 export const UserSchema = z.object({
   uid: z.string(),
-  email: z.string().email(),
+  email: z.string(),
   displayName: z.string(),
   photoURL: z.string().nullable(),
   createdAt: TimestampSchema,
   schemaVersion: z.number(),
-  prefs: z.object({
-    hideCompletedTasks: z.boolean(),
-    hideCompletedSubtasks: z.boolean(),
-    rememberLastFolder: z.boolean(),
-  }),
+  prefs: UserPrefsSchema,
 });
 
 export const FolderSchema = z.object({
@@ -106,6 +108,7 @@ export const ItemSchema = z.object({
   }
 });
 
+export type UserPrefs = z.infer<typeof UserPrefsSchema>;
 export type User = z.infer<typeof UserSchema>;
 export type Folder = z.infer<typeof FolderSchema>;
 export type Item = z.infer<typeof ItemSchema>;

@@ -17,7 +17,10 @@ import {
   ArrowLeft,
   CornerDownRight,
   FolderPlus,
-  ArrowRight
+  ArrowRight,
+  User,
+  LogIn,
+  LogOut
 } from 'lucide-react';
 
 export const ICONS = {
@@ -40,6 +43,9 @@ export const ICONS = {
   cornerDownRight: CornerDownRight,
   folderPlus: FolderPlus,
   arrowRight: ArrowRight,
+  user: User,
+  logIn: LogIn,
+  logOut: LogOut,
 };
 
 export type IconName = keyof typeof ICONS;
