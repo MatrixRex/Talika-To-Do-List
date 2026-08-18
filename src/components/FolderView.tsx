@@ -1,17 +1,41 @@
 import { useState, useMemo, useEffect } from 'react';
 import type { Folder, Item, Reminder } from '../lib/schema';
 import { compareSortKeys } from '../lib/sort-keys';
+import { calculateReorderKey } from '../lib/reorder';
 import {
   calculateMatchCount,
   getDefaultModeForContext,
   type InputMode,
   type AppContext
 } from '../lib/unified-input';
-import { Button, Input, IconButton, Dialog, Menu, MenuItem } from '../ui';
-import { Icon } from '../ui/icons';
+import {
+  Button,
+  Input,
+  IconButton,
+  Dialog,
+  Menu,
+  MenuItem,
+  Icon,
+  type IconName,
+  getFolderColorStyle
+} from '../ui';
 import { TaskItem } from './TaskItem';
 import { UnifiedInput } from './UnifiedInput';
 import { SearchResultsView } from './SearchResultsView';
+import { FolderCustomizeDialog } from './FolderCustomizeDialog';
+import {
+  DndContext,
+  closestCenter,
+  TouchSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy
+} from '@dnd-kit/sortable';
 
 interface FolderViewProps {
   folder: Folder;
@@ -27,6 +51,8 @@ interface FolderViewProps {
   onMoveToFolder: (itemId: string, targetFolderId: string | null) => void;
   onRenameFolder: (id: string, newName: string) => void;
   onDeleteFolder: (id: string) => void;
+  onReorderTask?: (taskId: string, newSortKey: string) => void;
+  onUpdateFolder?: (folderId: string, updates: { icon?: string; color?: string }) => void;
   onSetReminder?: (itemId: string, reminder: Reminder | null) => void;
 }
 
@@ -44,6 +70,8 @@ export function FolderView({
   onMoveToFolder,
   onRenameFolder,
   onDeleteFolder,
+  onReorderTask,
+  onUpdateFolder,
   onSetReminder
 }: FolderViewProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -53,6 +81,19 @@ export function FolderView({
   const [menuOpen, setMenuOpen] = useState(false);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState(folder.name);
+  const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 180, tolerance: 5 },
+    })
+  );
+
+  const colorStyle = getFolderColorStyle(folder.color);
+  const iconName = (folder.icon as IconName) || 'folder';
 
   const context: AppContext = useMemo(
     () => ({ folderId: folder.id, parentId: selectedTaskId }),
@@ -94,6 +135,21 @@ export function FolderView({
     setSelectedTaskId((prev) => (prev === id ? null : id));
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !onReorderTask) return;
+
+    const newKey = calculateReorderKey(
+      rootTasks,
+      active.id as string,
+      over.id as string
+    );
+
+    if (newKey) {
+      onReorderTask(active.id as string, newKey);
+    }
+  };
+
   const handleSubmit = (text: string, currentMode: InputMode) => {
     if (currentMode === 'Create') {
       onCreateTask(text);
@@ -116,23 +172,35 @@ export function FolderView({
   return (
     <div className="flex flex-col h-full w-full bg-background overflow-hidden">
       {/* Folder Header */}
-      <div className="p-4 border-b border-surface min-h-header flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
+      <div
+        className="p-4 border-b min-h-header flex items-center justify-between shrink-0 transition-colors duration-fast"
+        style={colorStyle.style}
+      >
+        <div className="flex items-center gap-2 min-w-0">
           <IconButton aria-label="Back to Home" onClick={onBack}>
             <Icon name="arrowLeft" />
           </IconButton>
-          <Icon name="folder" className="text-accent" />
-          <h1 className="font-bold text-lg text-text truncate max-w-xs">
+          <Icon name={iconName} className="shrink-0" />
+          <h1 className="font-bold text-lg truncate max-w-xs">
             {folder.name}
           </h1>
         </div>
 
-        <div className="relative" onClick={(e) => e.stopPropagation()}>
+        <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
           <IconButton aria-label="Folder menu" onClick={() => setMenuOpen(!menuOpen)}>
             <Icon name="more" />
           </IconButton>
           <Menu isOpen={menuOpen} onClose={() => setMenuOpen(false)}>
             <div className="flex flex-col">
+              <MenuItem
+                icon={<Icon name="palette" />}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setIsCustomizeOpen(true);
+                }}
+              >
+                Icon & colour
+              </MenuItem>
               <MenuItem
                 icon={<Icon name="edit" />}
                 onClick={() => {
@@ -185,26 +253,37 @@ export function FolderView({
               No tasks in this folder. Add one below.
             </div>
           ) : (
-            <div className="flex flex-col gap-1">
-              {rootTasks.map((task) => (
-                <TaskItem
-                  key={task.id}
-                  item={task}
-                  subtasks={getSubtasks(task.id)}
-                  folders={folders}
-                  isSelected={selectedTaskId === task.id}
-                  onSelect={handleSelectTask}
-                  onComplete={onCompleteTask}
-                  onRename={onRenameTask}
-                  onDelete={onDeleteTask}
-                  onDuplicate={onDuplicateTask}
-                  onAddSubtask={(parentId, title) => onCreateTask(title, parentId)}
-                  onPromoteSubtask={onPromoteSubtask}
-                  onMoveToFolder={onMoveToFolder}
-                  onSetReminder={onSetReminder}
-                />
-              ))}
-            </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={rootTasks.map((t) => t.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="flex flex-col gap-1">
+                  {rootTasks.map((task) => (
+                    <TaskItem
+                      key={task.id}
+                      item={task}
+                      subtasks={getSubtasks(task.id)}
+                      folders={folders}
+                      isSelected={selectedTaskId === task.id}
+                      onSelect={handleSelectTask}
+                      onComplete={onCompleteTask}
+                      onRename={onRenameTask}
+                      onDelete={onDeleteTask}
+                      onDuplicate={onDuplicateTask}
+                      onAddSubtask={(parentId, title) => onCreateTask(title, parentId)}
+                      onPromoteSubtask={onPromoteSubtask}
+                      onMoveToFolder={onMoveToFolder}
+                      onSetReminder={onSetReminder}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
         </div>
       )}
@@ -232,10 +311,26 @@ export function FolderView({
           onKeyDown={(e) => e.key === 'Enter' && handleRename()}
         />
         <div className="flex justify-end gap-2 mt-4">
-          <Button variant="ghost" onClick={() => setIsRenameOpen(false)}>Cancel</Button>
-          <Button variant="primary" onClick={handleRename}>Save</Button>
+          <Button variant="ghost" onClick={() => setIsRenameOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleRename}>
+            Save
+          </Button>
         </div>
       </Dialog>
+
+      {/* Customize Folder Dialog */}
+      <FolderCustomizeDialog
+        isOpen={isCustomizeOpen}
+        folder={folder}
+        onClose={() => setIsCustomizeOpen(false)}
+        onSave={(folderId, updates) => {
+          if (onUpdateFolder) {
+            onUpdateFolder(folderId, updates);
+          }
+        }}
+      />
     </div>
   );
 }

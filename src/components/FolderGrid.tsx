@@ -1,8 +1,35 @@
 import { useState, useMemo } from 'react';
 import type { Folder, Item } from '../lib/schema';
 import { compareSortKeys } from '../lib/sort-keys';
-import { Card, Button, Input, Dialog, Menu, MenuItem, IconButton } from '../ui';
-import { Icon } from '../ui/icons';
+import { calculateReorderKey } from '../lib/reorder';
+import {
+  Card,
+  Button,
+  Input,
+  Dialog,
+  Menu,
+  MenuItem,
+  IconButton,
+  Icon,
+  type IconName,
+  getFolderColorStyle
+} from '../ui';
+import { FolderCustomizeDialog } from './FolderCustomizeDialog';
+import {
+  DndContext,
+  closestCenter,
+  TouchSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  rectSortingStrategy
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface FolderGridProps {
   folders: Folder[];
@@ -12,6 +39,8 @@ interface FolderGridProps {
   onCreateFolder: (name: string) => void;
   onRenameFolder: (id: string, newName: string) => void;
   onDeleteFolder: (id: string) => void;
+  onReorderFolder?: (folderId: string, newSortKey: string) => void;
+  onUpdateFolder?: (folderId: string, updates: { icon?: string; color?: string }) => void;
 }
 
 export function FolderGrid({
@@ -21,14 +50,27 @@ export function FolderGrid({
   onSelectFolder,
   onCreateFolder,
   onRenameFolder,
-  onDeleteFolder
+  onDeleteFolder,
+  onReorderFolder,
+  onUpdateFolder
 }: FolderGridProps) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [customizingFolder, setCustomizingFolder] = useState<Folder | null>(null);
 
   const sortedFolders = useMemo(() => {
     return [...folders].sort(compareSortKeys);
   }, [folders]);
+
+  // Touch and pointer sensors configured so standard taps / context menus are smooth
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 180, tolerance: 5 },
+    })
+  );
 
   const handleCreate = () => {
     if (newFolderName.trim()) {
@@ -40,6 +82,21 @@ export function FolderGrid({
 
   const getFolderItemCount = (folderId: string) => {
     return items.filter((i) => i.folderId === folderId && i.parentId === null).length;
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !onReorderFolder) return;
+
+    const newKey = calculateReorderKey(
+      sortedFolders,
+      active.id as string,
+      over.id as string
+    );
+
+    if (newKey) {
+      onReorderFolder(active.id as string, newKey);
+    }
   };
 
   return (
@@ -57,25 +114,37 @@ export function FolderGrid({
         </IconButton>
       </div>
 
-      <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 overflow-y-auto max-h-64">
-        {sortedFolders.map((folder) => (
-          <FolderCard
-            key={folder.id}
-            folder={folder}
-            itemCount={getFolderItemCount(folder.id)}
-            isActive={activeFolderId === folder.id}
-            onSelect={() => onSelectFolder(folder.id)}
-            onRename={(newName) => onRenameFolder(folder.id, newName)}
-            onDelete={() => onDeleteFolder(folder.id)}
-          />
-        ))}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={sortedFolders.map((f) => f.id)}
+          strategy={rectSortingStrategy}
+        >
+          <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 overflow-y-auto max-h-64">
+            {sortedFolders.map((folder) => (
+              <SortableFolderCard
+                key={folder.id}
+                folder={folder}
+                itemCount={getFolderItemCount(folder.id)}
+                isActive={activeFolderId === folder.id}
+                onSelect={() => onSelectFolder(folder.id)}
+                onRename={(newName) => onRenameFolder(folder.id, newName)}
+                onDelete={() => onDeleteFolder(folder.id)}
+                onCustomize={() => setCustomizingFolder(folder)}
+              />
+            ))}
 
-        {folders.length === 0 && (
-          <div className="col-span-full text-center py-6 text-text-muted text-sm">
-            No folders created yet. Tap + to organize tasks.
+            {folders.length === 0 && (
+              <div className="col-span-full text-center py-6 text-text-muted text-sm">
+                No folders created yet. Tap + to organize tasks.
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </SortableContext>
+      </DndContext>
 
       {/* Create Folder Dialog */}
       <Dialog isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)}>
@@ -88,21 +157,38 @@ export function FolderGrid({
           onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
         />
         <div className="flex justify-end gap-2 mt-4">
-          <Button variant="ghost" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-          <Button variant="primary" onClick={handleCreate}>Create</Button>
+          <Button variant="ghost" onClick={() => setIsCreateOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleCreate}>
+            Create
+          </Button>
         </div>
       </Dialog>
+
+      {/* Customize Folder Dialog */}
+      <FolderCustomizeDialog
+        isOpen={customizingFolder !== null}
+        folder={customizingFolder}
+        onClose={() => setCustomizingFolder(null)}
+        onSave={(folderId, updates) => {
+          if (onUpdateFolder) {
+            onUpdateFolder(folderId, updates);
+          }
+        }}
+      />
     </div>
   );
 }
 
-function FolderCard({
+function SortableFolderCard({
   folder,
   itemCount,
   isActive,
   onSelect,
   onRename,
-  onDelete
+  onDelete,
+  onCustomize
 }: {
   folder: Folder;
   itemCount: number;
@@ -110,10 +196,31 @@ function FolderCard({
   onSelect: () => void;
   onRename: (newName: string) => void;
   onDelete: () => void;
+  onCustomize: () => void;
 }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: folder.id });
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState(folder.name);
+
+  const colorStyle = getFolderColorStyle(folder.color);
+  const iconName = (folder.icon as IconName) || 'folder';
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: transition || 'transform 200ms cubic-bezier(0.2, 0, 0, 1)',
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 20 : 1,
+    ...colorStyle.style
+  };
 
   const handleRename = () => {
     if (renameValue.trim() && renameValue !== folder.name) {
@@ -123,21 +230,33 @@ function FolderCard({
   };
 
   return (
-    <>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <Card
-        className={`cursor-pointer flex flex-col justify-between min-h-card transition-all hover:bg-surface-active relative ${
+        className={`cursor-pointer flex flex-col justify-between min-h-card transition-colors duration-fast hover:opacity-90 relative border ${
           isActive ? 'ring-2 ring-accent' : ''
         }`}
         onClick={onSelect}
       >
         <div className="flex items-start justify-between">
-          <Icon name="folder" className="text-accent" />
+          <Icon name={iconName} className="shrink-0" />
           <div className="relative" onClick={(e) => e.stopPropagation()}>
-            <IconButton aria-label="Folder actions" onClick={() => setMenuOpen(!menuOpen)}>
+            <IconButton
+              aria-label="Folder actions"
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
               <Icon name="more" />
             </IconButton>
             <Menu isOpen={menuOpen} onClose={() => setMenuOpen(false)}>
               <div className="flex flex-col">
+                <MenuItem
+                  icon={<Icon name="palette" />}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onCustomize();
+                  }}
+                >
+                  Icon & colour
+                </MenuItem>
                 <MenuItem
                   icon={<Icon name="edit" />}
                   onClick={() => {
@@ -163,8 +282,8 @@ function FolderCard({
         </div>
 
         <div className="mt-2">
-          <div className="font-semibold text-sm truncate text-text">{folder.name}</div>
-          <div className="text-xs text-text-muted">
+          <div className="font-semibold text-sm truncate">{folder.name}</div>
+          <div className="text-xs opacity-75">
             {itemCount} {itemCount === 1 ? 'task' : 'tasks'}
           </div>
         </div>
@@ -179,10 +298,14 @@ function FolderCard({
           onKeyDown={(e) => e.key === 'Enter' && handleRename()}
         />
         <div className="flex justify-end gap-2 mt-4">
-          <Button variant="ghost" onClick={() => setIsRenameOpen(false)}>Cancel</Button>
-          <Button variant="primary" onClick={handleRename}>Save</Button>
+          <Button variant="ghost" onClick={() => setIsRenameOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleRename}>
+            Save
+          </Button>
         </div>
       </Dialog>
-    </>
+    </div>
   );
 }

@@ -5,6 +5,8 @@ import { Icon } from '../ui/icons';
 import { SubtaskItem } from './SubtaskItem';
 import { ReminderDialog } from './ReminderDialog';
 import { formatReminder } from '../lib/recurrence';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface TaskItemProps {
   item: Item;
@@ -20,6 +22,7 @@ interface TaskItemProps {
   onPromoteSubtask: (id: string) => void;
   onMoveToFolder: (itemId: string, targetFolderId: string | null) => void;
   onSetReminder?: (itemId: string, reminder: Reminder | null) => void;
+  isSortable?: boolean;
 }
 
 export function TaskItem({
@@ -36,6 +39,7 @@ export function TaskItem({
   onPromoteSubtask,
   onMoveToFolder,
   onSetReminder,
+  isSortable = true,
 }: TaskItemProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -48,6 +52,27 @@ export function TaskItem({
   const [isMoveOpen, setIsMoveOpen] = useState(false);
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [pendingMoveTarget, setPendingMoveTarget] = useState<{ id: string | null; name: string } | null>(null);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: item.id,
+    disabled: !isSortable,
+  });
+
+  const sortableStyle = isSortable
+    ? {
+        transform: CSS.Transform.toString(transform),
+        transition: transition || 'transform 200ms cubic-bezier(0.2, 0, 0, 1)',
+        opacity: isDragging ? 0.4 : 1,
+        zIndex: isDragging ? 20 : 1,
+      }
+    : undefined;
 
   const handleRename = () => {
     if (renameValue.trim() && renameValue !== item.title) {
@@ -89,7 +114,7 @@ export function TaskItem({
   };
 
   return (
-    <div className="flex flex-col">
+    <div ref={setNodeRef} style={sortableStyle} className="flex flex-col">
       <ListRow
         className={`cursor-pointer transition-colors duration-fast ${item.done ? 'opacity-60' : ''} ${isSelected ? 'bg-surface-active ring-1 ring-accent' : ''}`}
         onClick={() => {
@@ -102,6 +127,19 @@ export function TaskItem({
           setMenuOpen(true);
         }}
       >
+        {/* Drag Handle */}
+        {isSortable && (
+          <div
+            {...attributes}
+            {...listeners}
+            className="p-1 -ml-1 text-text-muted hover:text-text cursor-grab active:cursor-grabbing touch-none shrink-0"
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Drag to reorder"
+          >
+            <Icon name="gripVertical" />
+          </div>
+        )}
+
         {/* Chevron for subtask expand/collapse */}
         {subtasks.length > 0 ? (
           <IconButton

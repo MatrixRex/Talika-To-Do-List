@@ -117,6 +117,15 @@ export async function updateItem(
   await updateDoc(itemRef, { ...updates, updatedAt: now });
 }
 
+export async function reorderItem(itemId: string, newSortKey: string): Promise<void> {
+  const itemRef = doc(db, 'items', itemId);
+  const now = Timestamp.now();
+  await updateDoc(itemRef, {
+    sortKey: newSortKey,
+    updatedAt: now
+  });
+}
+
 export async function getSubtasks(itemId: string): Promise<Item[]> {
   const itemsRef = collection(db, 'items');
   const q = query(itemsRef, where('parentId', '==', itemId));
@@ -280,6 +289,15 @@ export async function updateFolder(
   const folderRef = doc(db, 'folders', folderId);
   const now = Timestamp.now();
   await updateDoc(folderRef, { ...updates, updatedAt: now });
+}
+
+export async function reorderFolder(folderId: string, newSortKey: string): Promise<void> {
+  const folderRef = doc(db, 'folders', folderId);
+  const now = Timestamp.now();
+  await updateDoc(folderRef, {
+    sortKey: newSortKey,
+    updatedAt: now
+  });
 }
 
 async function getItemsInFolder(folderId: string): Promise<string[]> {

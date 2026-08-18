@@ -6,3 +6,5 @@ export * from './ListRow';
 export * from './Sheet';
 export * from './Menu';
 export * from './Dialog';
+export * from './icons';
+export * from './colors';

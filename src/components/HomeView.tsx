@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import type { Folder, Item, Reminder } from '../lib/schema';
 import { compareSortKeys } from '../lib/sort-keys';
+import { calculateReorderKey } from '../lib/reorder';
 import {
   calculateMatchCount,
   getDefaultModeForContext,
@@ -12,6 +13,19 @@ import { TaskItem } from './TaskItem';
 import { FolderGrid } from './FolderGrid';
 import { UnifiedInput } from './UnifiedInput';
 import { SearchResultsView } from './SearchResultsView';
+import {
+  DndContext,
+  closestCenter,
+  TouchSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy
+} from '@dnd-kit/sortable';
 
 interface HomeViewProps {
   items: Item[];
@@ -27,6 +41,9 @@ interface HomeViewProps {
   onCreateFolder: (name: string) => void;
   onRenameFolder: (id: string, newName: string) => void;
   onDeleteFolder: (id: string) => void;
+  onReorderTask?: (taskId: string, newSortKey: string) => void;
+  onReorderFolder?: (folderId: string, newSortKey: string) => void;
+  onUpdateFolder?: (folderId: string, updates: { icon?: string; color?: string }) => void;
   onSetReminder?: (itemId: string, reminder: Reminder | null) => void;
 }
 
@@ -44,11 +61,23 @@ export function HomeView({
   onCreateFolder,
   onRenameFolder,
   onDeleteFolder,
+  onReorderTask,
+  onReorderFolder,
+  onUpdateFolder,
   onSetReminder
 }: HomeViewProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState<InputMode>('Create');
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 180, tolerance: 5 },
+    })
+  );
 
   const context: AppContext = useMemo(
     () => ({ folderId: null, parentId: selectedTaskId }),
@@ -89,6 +118,21 @@ export function HomeView({
 
   const handleSelectTask = (id: string) => {
     setSelectedTaskId((prev) => (prev === id ? null : id));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !onReorderTask) return;
+
+    const newKey = calculateReorderKey(
+      defaultRootTasks,
+      active.id as string,
+      over.id as string
+    );
+
+    if (newKey) {
+      onReorderTask(active.id as string, newKey);
+    }
   };
 
   const handleSubmit = (text: string, currentMode: InputMode) => {
@@ -145,26 +189,37 @@ export function HomeView({
                   Inbox zero. Add a task below.
                 </div>
               ) : (
-                <div className="flex flex-col gap-1">
-                  {defaultRootTasks.map((task) => (
-                    <TaskItem
-                      key={task.id}
-                      item={task}
-                      subtasks={getSubtasks(task.id)}
-                      folders={folders}
-                      isSelected={selectedTaskId === task.id}
-                      onSelect={handleSelectTask}
-                      onComplete={onCompleteTask}
-                      onRename={onRenameTask}
-                      onDelete={onDeleteTask}
-                      onDuplicate={onDuplicateTask}
-                      onAddSubtask={(parentId, title) => onCreateTask(title, parentId)}
-                      onPromoteSubtask={onPromoteSubtask}
-                      onMoveToFolder={onMoveToFolder}
-                      onSetReminder={onSetReminder}
-                    />
-                  ))}
-                </div>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={defaultRootTasks.map((t) => t.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="flex flex-col gap-1">
+                      {defaultRootTasks.map((task) => (
+                        <TaskItem
+                          key={task.id}
+                          item={task}
+                          subtasks={getSubtasks(task.id)}
+                          folders={folders}
+                          isSelected={selectedTaskId === task.id}
+                          onSelect={handleSelectTask}
+                          onComplete={onCompleteTask}
+                          onRename={onRenameTask}
+                          onDelete={onDeleteTask}
+                          onDuplicate={onDuplicateTask}
+                          onAddSubtask={(parentId, title) => onCreateTask(title, parentId)}
+                          onPromoteSubtask={onPromoteSubtask}
+                          onMoveToFolder={onMoveToFolder}
+                          onSetReminder={onSetReminder}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
               )}
             </div>
           </div>
@@ -179,6 +234,8 @@ export function HomeView({
               onCreateFolder={onCreateFolder}
               onRenameFolder={onRenameFolder}
               onDeleteFolder={onDeleteFolder}
+              onReorderFolder={onReorderFolder}
+              onUpdateFolder={onUpdateFolder}
             />
           </div>
         </>

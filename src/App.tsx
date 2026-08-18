@@ -10,7 +10,10 @@ import {
   duplicateItem,
   promoteSubtask,
   moveItem,
-  setReminder
+  setReminder,
+  reorderItem,
+  reorderFolder,
+  updateFolder
 } from './lib/db';
 import { generateKeyBetween } from './lib/sort-keys';
 import type { Item, Folder, Reminder } from './lib/schema';
@@ -108,6 +111,17 @@ function MainApp() {
     await deleteFolder(id);
   };
 
+  const handleUpdateFolder = async (
+    id: string,
+    updates: { icon?: string; color?: string }
+  ) => {
+    await updateFolder(id, updates);
+  };
+
+  const handleReorderFolder = async (folderId: string, newSortKey: string) => {
+    await reorderFolder(folderId, newSortKey);
+  };
+
   // Task actions
   const handleCreateTask = async (title: string, parentId?: string) => {
     const targetFolderId = parentId
@@ -168,6 +182,10 @@ function MainApp() {
     await setReminder(itemId, reminder, firebaseUser.uid);
   };
 
+  const handleReorderTask = async (taskId: string, newSortKey: string) => {
+    await reorderItem(taskId, newSortKey);
+  };
+
   return (
     <main className="h-screen w-screen flex flex-col overflow-hidden bg-background text-text">
       <AuthBar />
@@ -187,6 +205,8 @@ function MainApp() {
             onMoveToFolder={handleMoveToFolder}
             onRenameFolder={handleRenameFolder}
             onDeleteFolder={handleDeleteFolder}
+            onReorderTask={handleReorderTask}
+            onUpdateFolder={handleUpdateFolder}
             onSetReminder={handleSetReminder}
           />
         ) : (
@@ -204,6 +224,9 @@ function MainApp() {
             onCreateFolder={handleCreateFolder}
             onRenameFolder={handleRenameFolder}
             onDeleteFolder={handleDeleteFolder}
+            onReorderTask={handleReorderTask}
+            onReorderFolder={handleReorderFolder}
+            onUpdateFolder={handleUpdateFolder}
             onSetReminder={handleSetReminder}
           />
         )}

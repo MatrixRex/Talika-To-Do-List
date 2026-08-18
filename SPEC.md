@@ -465,6 +465,13 @@ Radix scale.
 during drag · edge autoscroll works · icon and colour survive an export/import
 round-trip.
 
+**Status:** Completed.
+- `@dnd-kit/core` & `@dnd-kit/sortable` integrated with Pointer & Touch sensors.
+- `calculateReorderKey` computes fractional `sortKey` between adjacent neighbors, guaranteeing exactly 1 document write per reorder drop.
+- Curated icon set of 39 semantic keys with `FolderCustomizeDialog` (no icon component stored in Firestore).
+- Radix color scales imported in CSS and semantic color keys stored in Firestore.
+- Exit test suite in `src/lib/stage7.test.ts` (12 tests covering single write, fractional index stability, icons, colors, and export/import round-trip).
+
 ### Stage 8 — Collaboration
 Highest risk, last, on top of a system already proven to sync. Invite by email,
 `memberIds` denormalized down to items in a batched write, revoke, move-out
