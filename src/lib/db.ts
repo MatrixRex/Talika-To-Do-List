@@ -12,7 +12,7 @@ import {
   writeBatch,
   Timestamp
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import { generateKeyBetween } from './sort-keys';
 import { validateItemContext } from './schema';
 import type { Item, Folder, Reminder, User } from './schema';
@@ -20,9 +20,11 @@ import type { Item, Folder, Reminder, User } from './schema';
 const BATCH_LIMIT = 500;
 
 export async function firstKeyIn(folderId: string | null, parentId: string | null): Promise<string | null> {
+  const uid = auth.currentUser?.uid || '';
   const itemsRef = collection(db, 'items');
   const q = query(
     itemsRef,
+    where('memberIds', 'array-contains', uid),
     where('folderId', '==', folderId),
     where('parentId', '==', parentId),
     orderBy('sortKey', 'asc'),
@@ -34,9 +36,11 @@ export async function firstKeyIn(folderId: string | null, parentId: string | nul
 }
 
 export async function lastKeyIn(folderId: string | null, parentId: string | null): Promise<string | null> {
+  const uid = auth.currentUser?.uid || '';
   const itemsRef = collection(db, 'items');
   const q = query(
     itemsRef,
+    where('memberIds', 'array-contains', uid),
     where('folderId', '==', folderId),
     where('parentId', '==', parentId),
     orderBy('sortKey', 'desc'),
@@ -127,8 +131,9 @@ export async function reorderItem(itemId: string, newSortKey: string): Promise<v
 }
 
 export async function getSubtasks(itemId: string): Promise<Item[]> {
+  const uid = auth.currentUser?.uid || '';
   const itemsRef = collection(db, 'items');
-  const q = query(itemsRef, where('parentId', '==', itemId));
+  const q = query(itemsRef, where('memberIds', 'array-contains', uid), where('parentId', '==', itemId));
   const snap = await getDocs(q);
   return snap.docs.map(d => d.data() as Item);
 }
@@ -301,8 +306,9 @@ export async function reorderFolder(folderId: string, newSortKey: string): Promi
 }
 
 async function getItemsInFolder(folderId: string): Promise<string[]> {
+  const uid = auth.currentUser?.uid || '';
   const itemsRef = collection(db, 'items');
-  const q = query(itemsRef, where('folderId', '==', folderId));
+  const q = query(itemsRef, where('memberIds', 'array-contains', uid), where('folderId', '==', folderId));
   const snap = await getDocs(q);
   return snap.docs.map(d => d.id);
 }
@@ -333,11 +339,14 @@ export async function deleteFolder(folderId: string): Promise<void> {
 
 export async function orphanSweep(): Promise<void> {
   try {
-    const foldersSnap = await getDocs(collection(db, 'folders'));
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+
+    const foldersSnap = await getDocs(query(collection(db, 'folders'), where('memberIds', 'array-contains', uid)));
     const validFolderIds = new Set(foldersSnap.docs.map(d => d.id));
     validFolderIds.add('null');
     
-    const itemsSnap = await getDocs(collection(db, 'items'));
+    const itemsSnap = await getDocs(query(collection(db, 'items'), where('memberIds', 'array-contains', uid)));
     const orphanedIds: string[] = [];
     const validItemIds = new Set(itemsSnap.docs.map(d => d.id));
     
@@ -448,8 +457,9 @@ export async function shareFolder(
     }
   }
 
+  const uid = auth.currentUser?.uid || '';
   const itemsRef = collection(db, 'items');
-  const q = query(itemsRef, where('folderId', '==', folderId));
+  const q = query(itemsRef, where('memberIds', 'array-contains', uid), where('folderId', '==', folderId));
   const snap = await getDocs(q);
 
   let strippedCount = 0;
@@ -538,8 +548,9 @@ export async function revokeFolderMember(
   delete newRoles[memberIdToRemove];
 
   const now = Timestamp.now();
+  const uid = auth.currentUser?.uid || '';
   const itemsRef = collection(db, 'items');
-  const q = query(itemsRef, where('folderId', '==', folderId));
+  const q = query(itemsRef, where('memberIds', 'array-contains', uid), where('folderId', '==', folderId));
   const snap = await getDocs(q);
 
   let currentBatch = writeBatch(db);
@@ -577,8 +588,9 @@ export async function leaveFolder(folderId: string, actorId: string): Promise<vo
 }
 
 export async function countFolderReminders(folderId: string): Promise<number> {
+  const uid = auth.currentUser?.uid || '';
   const itemsRef = collection(db, 'items');
-  const q = query(itemsRef, where('folderId', '==', folderId));
+  const q = query(itemsRef, where('memberIds', 'array-contains', uid), where('folderId', '==', folderId));
   const snap = await getDocs(q);
   let count = 0;
   for (const docSnap of snap.docs) {
