@@ -8,6 +8,8 @@ interface TaskItemProps {
   item: Item;
   subtasks: Item[];
   folders: Folder[];
+  isSelected?: boolean;
+  onSelect?: (id: string) => void;
   onComplete: (id: string, done: boolean) => void;
   onRename: (id: string, newTitle: string) => void;
   onDelete: (id: string) => void;
@@ -21,6 +23,8 @@ export function TaskItem({
   item,
   subtasks,
   folders,
+  isSelected = false,
+  onSelect,
   onComplete,
   onRename,
   onDelete,
@@ -57,12 +61,26 @@ export function TaskItem({
 
   return (
     <div className="flex flex-col">
-      <ListRow className={item.done ? 'opacity-60' : ''}>
+      <ListRow
+        className={`cursor-pointer transition-colors duration-fast ${item.done ? 'opacity-60' : ''} ${isSelected ? 'bg-surface-active ring-1 ring-accent' : ''}`}
+        onClick={() => {
+          if (onSelect) {
+            onSelect(item.id);
+          }
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setMenuOpen(true);
+        }}
+      >
         {/* Chevron for subtask expand/collapse */}
         {subtasks.length > 0 ? (
           <IconButton
             aria-label={isExpanded ? "Collapse subtasks" : "Expand subtasks"}
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
+            }}
           >
             <Icon name={isExpanded ? 'chevronDown' : 'chevronRight'} />
           </IconButton>
@@ -73,13 +91,24 @@ export function TaskItem({
         {/* Completion Checkbox */}
         <IconButton
           aria-label={item.done ? "Mark incomplete" : "Mark complete"}
-          onClick={() => onComplete(item.id, !item.done)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onComplete(item.id, !item.done);
+          }}
         >
           <Icon name={item.done ? 'check' : 'circle'} className={item.done ? 'text-accent' : 'text-text-muted'} />
         </IconButton>
 
         {/* Task Title */}
-        <div className="flex-1 min-w-0 flex items-center gap-2" onClick={() => setIsExpanded(!isExpanded)}>
+        <div
+          className="flex-1 min-w-0 flex items-center gap-2"
+          onClick={(e) => {
+            if (onSelect) {
+              e.stopPropagation();
+              onSelect(item.id);
+            }
+          }}
+        >
           <span className={`truncate ${item.done ? 'line-through text-text-muted' : 'text-text'}`}>
             {item.title}
           </span>

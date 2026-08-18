@@ -20,7 +20,8 @@ import {
   ArrowRight,
   User,
   LogIn,
-  LogOut
+  LogOut,
+  X
 } from 'lucide-react';
 
 export const ICONS = {
@@ -46,6 +47,7 @@ export const ICONS = {
   user: User,
   logIn: LogIn,
   logOut: LogOut,
+  x: X,
 };
 
 export type IconName = keyof typeof ICONS;
