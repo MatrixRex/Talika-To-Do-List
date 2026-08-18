@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { Folder, Item } from '../lib/schema';
+import { compareSortKeys } from '../lib/sort-keys';
 import { Card, Button, Input, Dialog, Menu, MenuItem, IconButton } from '../ui';
 import { Icon } from '../ui/icons';
 
@@ -25,6 +26,10 @@ export function FolderGrid({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
 
+  const sortedFolders = useMemo(() => {
+    return [...folders].sort(compareSortKeys);
+  }, [folders]);
+
   const handleCreate = () => {
     if (newFolderName.trim()) {
       onCreateFolder(newFolderName.trim());
@@ -44,7 +49,7 @@ export function FolderGrid({
           <Icon name="folder" className="text-accent" />
           <h2 className="font-bold text-base text-text">Folders</h2>
           <span className="text-xs px-2 py-0.5 rounded-full bg-surface text-text-muted">
-            {folders.length}
+            {sortedFolders.length}
           </span>
         </div>
         <IconButton aria-label="Create new folder" onClick={() => setIsCreateOpen(true)}>
@@ -53,7 +58,7 @@ export function FolderGrid({
       </div>
 
       <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 overflow-y-auto max-h-64">
-        {folders.map((folder) => (
+        {sortedFolders.map((folder) => (
           <FolderCard
             key={folder.id}
             folder={folder}

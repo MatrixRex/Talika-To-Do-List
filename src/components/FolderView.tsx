@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { Folder, Item } from '../lib/schema';
+import { compareSortKeys } from '../lib/sort-keys';
 import { Button, Input, IconButton, Dialog, Menu, MenuItem } from '../ui';
 import { Icon } from '../ui/icons';
 import { TaskItem } from './TaskItem';
@@ -47,13 +48,13 @@ export function FolderView({
   const rootTasks = useMemo(() => {
     return folderTasks
       .filter((i) => i.parentId === null)
-      .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+      .sort(compareSortKeys);
   }, [folderTasks]);
 
   const getSubtasks = (parentId: string) => {
     return folderTasks
       .filter((i) => i.parentId === parentId)
-      .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+      .sort(compareSortKeys);
   };
 
   const handleCreate = () => {

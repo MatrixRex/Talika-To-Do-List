@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { Folder, Item } from '../lib/schema';
+import { compareSortKeys } from '../lib/sort-keys';
 import { Input, IconButton } from '../ui';
 import { Icon } from '../ui/icons';
 import { TaskItem } from './TaskItem';
@@ -46,13 +47,13 @@ export function HomeView({
   const defaultRootTasks = useMemo(() => {
     return defaultItems
       .filter((i) => i.parentId === null)
-      .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+      .sort(compareSortKeys);
   }, [defaultItems]);
 
   const getSubtasks = (parentId: string) => {
     return defaultItems
       .filter((i) => i.parentId === parentId)
-      .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+      .sort(compareSortKeys);
   };
 
   const handleCreate = () => {

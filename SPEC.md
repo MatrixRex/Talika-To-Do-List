@@ -427,7 +427,12 @@ duplicate · tasks created offline on both → both appear, both keep position �
 delete on A while B edits offline → deterministic, no zombie · airplane mode
 24h, 50 edits, reconnect → all 50 land · cold start offline renders in <2s.
 
-Write down what "wins" means for each case and make it deliberate.
+**Conflict Resolution Semantics (What Wins):**
+1. **Concurrent Field Edits:** Device A toggles `done`/`completedAt`, Device B edits `title`. `updateDoc` merges non-conflicting fields into the single document upon reconnect with 0 duplicates.
+2. **Conflicting Same-Field Edits:** Last-Write-Wins (LWW) based on commit arrival; single document preserved without duplication.
+3. **Delete vs Offline Edit:** Deletion wins deterministically. Reconnecting edits on deleted items fail with `NOT_FOUND` via `updateDoc` (no zombie resurrection).
+4. **Offline Subtask on Deleted Parent:** Orphaned subtasks are automatically purged on startup by `orphanSweep()`.
+5. **Concurrent Offline Creates & Ordering:** UUIDs prevent ID collisions; `generateKeyBetween` + deterministic `compareSortKeys` (`sortKey`, `id`) ensures stable position across all devices.
 
 ### Stage 5 — Unified input
 Segmented control, mode matrix from §6, preserved query, cross-mode match hint,

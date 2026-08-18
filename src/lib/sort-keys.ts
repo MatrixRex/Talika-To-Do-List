@@ -94,3 +94,21 @@ export function generateKeyBetween(a: string | null, b: string | null): string {
   
   return baseKey + tiebreaker;
 }
+
+/**
+ * Deterministic comparator for items and folders by sortKey, tie-breaking by id.
+ * Uses exact code-point comparison (`<` and `>`) to match Firestore's `orderBy('sortKey')`.
+ */
+export function compareSortKeys(
+  a: { sortKey: string; id?: string },
+  b: { sortKey: string; id?: string }
+): number {
+  if (a.sortKey < b.sortKey) return -1;
+  if (a.sortKey > b.sortKey) return 1;
+  if (a.id && b.id) {
+    if (a.id < b.id) return -1;
+    if (a.id > b.id) return 1;
+  }
+  return 0;
+}
+
