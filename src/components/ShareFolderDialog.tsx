@@ -185,7 +185,7 @@ export function ShareFolderDialog({
       <Dialog isOpen={isOpen} onClose={onClose}>
         <div className="flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
           {/* Header */}
-          <div className="flex items-center gap-3 border-b border-surface pb-3">
+          <div className="flex items-center gap-3 border-b border-surface-border pb-3">
             <div
               className="p-2 rounded-md flex items-center justify-center shrink-0"
               style={colorStyle.style}
@@ -306,7 +306,7 @@ export function ShareFolderDialog({
           </div>
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-between pt-2 border-t border-surface mt-2">
+          <div className="flex items-center justify-between pt-2 border-t border-surface-border mt-2">
             {!isOwner ? (
               <Button
                 variant="danger"

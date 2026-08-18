@@ -11,7 +11,7 @@ export function Sheet({ children, isOpen, onClose }: SheetProps) {
   return (
     <div className="fixed inset-0 z-40 flex flex-col justify-end">
       <div className="absolute inset-0 bg-text opacity-20" onClick={onClose} />
-      <div className="relative bg-background text-text rounded-t-lg p-4 transition-transform duration-base translate-y-0 shadow-lg border-t border-surface">
+      <div className="relative bg-surface-elevated text-text rounded-t-lg p-4 transition-transform duration-base translate-y-0 shadow-lg border-t border-surface-border">
         {children}
       </div>
     </div>

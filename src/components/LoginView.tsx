@@ -24,7 +24,7 @@ export function LoginView() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background text-text">
-      <Card className="w-full max-w-sm flex flex-col items-center text-center p-8 gap-6 border border-surface shadow-md">
+      <Card className="w-full max-w-sm flex flex-col items-center text-center p-8 gap-6 border border-surface-border shadow-md">
         <div className="w-16 h-16 rounded-full bg-surface flex items-center justify-center text-accent">
           <Icon name="check" className="w-8 h-8" />
         </div>

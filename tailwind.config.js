@@ -9,6 +9,8 @@ export default {
     colors: {
       surface: 'var(--surface)',
       'surface-active': 'var(--surface-active)',
+      'surface-elevated': 'var(--surface-elevated)',
+      'surface-border': 'var(--surface-border)',
       'text-muted': 'var(--text-muted)',
       accent: 'var(--accent)',
       danger: 'var(--danger)',

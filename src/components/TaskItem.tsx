@@ -71,7 +71,7 @@ export function TaskItem({
         transform: CSS.Transform.toString(transform),
         transition: transition || 'transform 200ms cubic-bezier(0.2, 0, 0, 1)',
         opacity: isDragging ? 0.4 : 1,
-        zIndex: isDragging ? 20 : 1,
+        zIndex: isDragging ? 20 : undefined,
       }
     : undefined;
 

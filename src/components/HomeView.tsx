@@ -169,8 +169,8 @@ export function HomeView({
       ) : (
         <>
           {/* Top Pane: Default Tasks (Inbox) */}
-          <div className="flex-1 flex flex-col min-h-0 border-b border-surface">
-            <div className="p-4 border-b border-surface min-h-header flex items-center justify-between">
+          <div className="flex-1 flex flex-col min-h-0 border-b border-surface-border">
+            <div className="p-4 border-b border-surface-border min-h-header flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Icon name="inbox" className="text-text-muted" />
                 <h1 className="font-bold text-base text-text">Inbox</h1>
@@ -222,7 +222,7 @@ export function HomeView({
           </div>
 
           {/* Bottom Pane: Folders Grid */}
-          <div className="shrink-0 bg-background border-b border-surface">
+          <div className="shrink-0 bg-background border-b border-surface-border">
             <FolderGrid
               folders={folders}
               items={items}

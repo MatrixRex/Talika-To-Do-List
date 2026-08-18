@@ -14,7 +14,7 @@ export function AuthBar() {
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <header className="relative flex items-center justify-between px-4 py-2 border-b border-surface">
+    <header className="relative flex items-center justify-between px-4 py-2 border-b border-surface-border">
       <div className="flex items-center gap-2">
         <span className="font-bold tracking-tight text-accent text-lg">Talika</span>
       </div>
@@ -30,7 +30,7 @@ export function AuthBar() {
             <img
               src={firebaseUser.photoURL}
               alt={displayName}
-              className="w-8 h-8 rounded-full border border-surface"
+              className="w-8 h-8 rounded-full border border-surface-border"
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-accent text-background flex items-center justify-center font-bold text-sm">
@@ -43,7 +43,7 @@ export function AuthBar() {
         </button>
 
         <Menu isOpen={menuOpen} onClose={() => setMenuOpen(false)} className="w-56 right-0">
-          <div className="px-4 py-2 border-b border-surface">
+          <div className="px-4 py-2 border-b border-surface-border">
             <p className="text-sm font-semibold truncate">{displayName}</p>
             {email && <p className="text-xs text-text-muted truncate">{email}</p>}
           </div>

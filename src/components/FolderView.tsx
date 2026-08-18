@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import type { Folder, Item, Reminder } from '../lib/schema';
 import { compareSortKeys } from '../lib/sort-keys';
 import { calculateReorderKey } from '../lib/reorder';
+import {
   getDefaultModeForContext,
   type InputMode,
   type AppContext

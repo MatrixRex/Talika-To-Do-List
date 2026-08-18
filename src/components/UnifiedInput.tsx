@@ -140,13 +140,13 @@ export function UnifiedInput({
 
   return (
     <div
-      className="shrink-0 bg-background border-t border-surface flex flex-col select-none"
+      className="shrink-0 bg-background border-t border-surface-border flex flex-col select-none"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       {/* Active Parent Task Banner (when creating subtask) */}
       {context.parentId && parentTaskTitle && (
-        <div className="flex items-center justify-between px-4 py-1.5 bg-surface text-text text-xs border-b border-surface">
+        <div className="flex items-center justify-between px-4 py-1.5 bg-surface text-text text-xs border-b border-surface-border">
           <div className="flex items-center gap-1.5 truncate">
             <Icon name="cornerDownRight" className="text-accent shrink-0" />
             <span className="text-text-muted">Subtask for:</span>

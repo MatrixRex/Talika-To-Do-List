@@ -38,12 +38,16 @@
 
 @layer base {
   :root {
-    --background: #ffffff;
+    /* Use gray-2 for the app background so white cards pop clearly */
+    --background: var(--gray-2);
     --text: var(--gray-12);
     
-    /* Semantic — components use ONLY these */
-    --surface: var(--gray-2);
-    --surface-active: var(--gray-4);
+    /* Light Mode: Surfaces are pure white to stand out from the tinted background */
+    --surface: #ffffff;
+    --surface-active: color-mix(in srgb, #000 4%, #ffffff);
+    --surface-elevated: #ffffff;
+    --surface-border: color-mix(in srgb, #000 8%, #ffffff);
+
     --text-muted: var(--gray-11);
     --accent: var(--blue-9);
     --danger: var(--red-9);
@@ -77,6 +81,12 @@
   .dark {
     --background: var(--gray-1);
     --text: var(--gray-12);
+    
+    /* Dark Mode: mix with white for raised surfaces (bumped for visibility) */
+    --surface: color-mix(in srgb, #fff 8%, var(--background));
+    --surface-active: color-mix(in srgb, #fff 12%, var(--background));
+    --surface-elevated: color-mix(in srgb, #fff 16%, var(--background));
+    --surface-border: color-mix(in srgb, #fff 15%, var(--background));
   }
 
   body {

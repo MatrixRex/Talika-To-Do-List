@@ -114,7 +114,7 @@ export function FolderCustomizeDialog({
         {/* Icon Picker */}
         <div className="flex flex-col gap-2">
           <span className="text-xs font-semibold text-text-muted">Folder Icon ({CURATED_FOLDER_ICONS.length} curated)</span>
-          <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-48 overflow-y-auto p-1 bg-surface rounded-md border border-surface">
+          <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-48 overflow-y-auto p-1 bg-surface rounded-md border border-surface-border">
             {CURATED_FOLDER_ICONS.map((iconName) => {
               const isSelected = selectedIcon === iconName;
               return (
@@ -137,7 +137,7 @@ export function FolderCustomizeDialog({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-surface">
+        <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-surface-border">
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>

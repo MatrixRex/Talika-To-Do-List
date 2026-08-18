@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { UnifiedInput } from './UnifiedInput';
-import type { InputMode, AppContext } from '../lib/unified-input';
+import type { AppContext } from '../lib/unified-input';
 
 describe('UnifiedInput', () => {
   afterEach(cleanup);
@@ -34,7 +33,7 @@ describe('UnifiedInput', () => {
     const onModeChange = vi.fn();
     const onSubmit = vi.fn();
 
-    const { rerender } = render(
+    render(
       <UnifiedInput
         context={defaultContext}
         query="Buy groceries"

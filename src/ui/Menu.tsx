@@ -1,4 +1,6 @@
+import { useRef, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 export interface MenuProps {
   children: ReactNode;
@@ -8,13 +10,35 @@ export interface MenuProps {
 }
 
 export function Menu({ children, isOpen, onClose, className }: MenuProps) {
-  if (!isOpen) return null;
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ top: 0, right: 0 });
+
+  useEffect(() => {
+    if (isOpen && anchorRef.current) {
+      const rect = anchorRef.current.getBoundingClientRect();
+      setPosition({
+        top: rect.top,
+        right: window.innerWidth - rect.right,
+      });
+    }
+  }, [isOpen]);
+
   return (
     <>
-      <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className={`absolute right-0 top-full mt-1 z-50 bg-background text-text rounded-md shadow-lg border border-surface p-1 min-w-menu ${className || ''}`}>
-        {children}
-      </div>
+      <div ref={anchorRef} className="absolute right-0 top-full" aria-hidden="true" />
+      {isOpen && createPortal(
+        <>
+          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); onClose(); }} />
+          <div 
+            className={`fixed mt-1 z-50 bg-surface-elevated text-text rounded-md shadow-lg border border-surface-border p-1 min-w-menu ${className || ''}`}
+            style={{ top: position.top, right: position.right }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {children}
+          </div>
+        </>,
+        document.body
+      )}
     </>
   );
 }

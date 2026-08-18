@@ -230,7 +230,7 @@ export function ReminderDialog({
                 onChange={(e) => setIntervalN(Math.max(1, Number(e.target.value)))}
               />
               <select
-                className="flex-1 h-10 px-3 rounded-md bg-surface text-text border border-surface text-sm"
+                className="flex-1 h-10 px-3 rounded-md bg-surface text-text border border-surface-border text-sm"
                 value={intervalUnit}
                 onChange={(e) => setIntervalUnit(e.target.value as 'day' | 'week' | 'month')}
               >
@@ -243,7 +243,7 @@ export function ReminderDialog({
         )}
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-between mt-2 pt-2 border-t border-surface">
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-surface-border">
           {currentReminder ? (
             <Button variant="danger" onClick={handleRemove}>
               Remove

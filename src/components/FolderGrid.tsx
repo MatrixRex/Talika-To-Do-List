@@ -105,7 +105,7 @@ export function FolderGrid({
 
   return (
     <div className="flex flex-col h-full w-full">
-      <div className="flex items-center justify-between p-4 border-b border-surface min-h-header">
+      <div className="flex items-center justify-between p-4 border-b border-surface-border min-h-header">
         <div className="flex items-center gap-2">
           <Icon name="folder" className="text-accent" />
           <h2 className="font-bold text-base text-text">Folders</h2>
@@ -234,7 +234,7 @@ function SortableFolderCard({
     transform: CSS.Transform.toString(transform),
     transition: transition || 'transform 200ms cubic-bezier(0.2, 0, 0, 1)',
     opacity: isDragging ? 0.4 : 1,
-    zIndex: isDragging ? 20 : 1,
+    zIndex: isDragging ? 20 : undefined,
     ...colorStyle.style
   };
 
