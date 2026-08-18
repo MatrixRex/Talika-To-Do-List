@@ -483,6 +483,15 @@ reorders offline → no corruption · batched `memberIds` write across 500 items
 completes without partial state · rules test: editor cannot delete the folder or
 change roles · move-out transfers ownership and removes it for everyone else.
 
+**Status:** Completed.
+- User lookup by email with security rules granting authenticated read access for collaborator discovery and profile rendering.
+- `shareFolder` denormalizes `memberIds` across all folder items and subtasks in client-side batches (≤500 ops), automatically stripping reminders on shared items per Invariant 5 with a warning dialog.
+- `ShareFolderDialog` modal composed of `src/ui/` primitives with email invitations, role badges (`owner` / `editor`), reminder removal warning, member revocation, and self-leave flows.
+- Move-out claim semantics (§5) fully implemented: mover claims ownership (`ownerId = moverUid`, `memberIds = [moverUid]`, `folderId = null`), regenerates `sortKey`, updates subtasks, with confirmation dialog warning of isolation from other members.
+- Move-into-shared folder strips reminder and warns the user first.
+- Firestore security rules updated and verified in `rules.test.ts` (editor cannot delete folder or elevate roles; non-members and revoked members are immediately denied; reminder invariant strictly enforced).
+- Exit test suite in `src/lib/stage8.test.ts` (11 tests covering invitation, denormalization, reminder stripping, revocation, leave folder, move-out claim semantics, scale batching, and collaborative reorder consistency).
+
 ### Stage 9 — Performance and ship
 Lazy-load the Firestore SDK: render from the IndexedDB cache first, dynamic-import
 the SDK after first paint. This is worth more than every other perf change

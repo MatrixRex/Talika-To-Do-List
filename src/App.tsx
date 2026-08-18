@@ -195,6 +195,7 @@ function MainApp() {
             folder={activeFolder}
             items={items}
             folders={folders}
+            currentUserId={firebaseUser.uid}
             onBack={() => setActiveFolderId(null)}
             onCreateTask={handleCreateTask}
             onCompleteTask={handleCompleteTask}
@@ -213,6 +214,7 @@ function MainApp() {
           <HomeView
             items={items}
             folders={folders}
+            currentUserId={firebaseUser.uid}
             onSelectFolder={setActiveFolderId}
             onCreateTask={handleCreateTask}
             onCompleteTask={handleCompleteTask}

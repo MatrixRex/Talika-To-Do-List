@@ -23,6 +23,7 @@ import { TaskItem } from './TaskItem';
 import { UnifiedInput } from './UnifiedInput';
 import { SearchResultsView } from './SearchResultsView';
 import { FolderCustomizeDialog } from './FolderCustomizeDialog';
+import { ShareFolderDialog } from './ShareFolderDialog';
 import {
   DndContext,
   closestCenter,
@@ -41,6 +42,7 @@ interface FolderViewProps {
   folder: Folder;
   items: Item[];
   folders: Folder[];
+  currentUserId?: string;
   onBack: () => void;
   onCreateTask: (title: string, parentId?: string) => void;
   onCompleteTask: (id: string, done: boolean) => void;
@@ -60,6 +62,7 @@ export function FolderView({
   folder,
   items,
   folders,
+  currentUserId = '',
   onBack,
   onCreateTask,
   onCompleteTask,
@@ -82,6 +85,7 @@ export function FolderView({
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState(folder.name);
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -184,6 +188,15 @@ export function FolderView({
           <h1 className="font-bold text-lg truncate max-w-xs">
             {folder.name}
           </h1>
+          {folder.memberIds && folder.memberIds.length > 1 && (
+            <span
+              className="flex items-center text-xs opacity-80 gap-1 px-2 py-0.5 rounded-full bg-surface"
+              title={`Shared with ${folder.memberIds.length} members`}
+            >
+              <Icon name="user" />
+              <span>{folder.memberIds.length}</span>
+            </span>
+          )}
         </div>
 
         <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -192,6 +205,15 @@ export function FolderView({
           </IconButton>
           <Menu isOpen={menuOpen} onClose={() => setMenuOpen(false)}>
             <div className="flex flex-col">
+              <MenuItem
+                icon={<Icon name="share" />}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setIsShareOpen(true);
+                }}
+              >
+                Share
+              </MenuItem>
               <MenuItem
                 icon={<Icon name="palette" />}
                 onClick={() => {
@@ -330,6 +352,15 @@ export function FolderView({
             onUpdateFolder(folderId, updates);
           }
         }}
+      />
+
+      {/* Share Folder Dialog */}
+      <ShareFolderDialog
+        isOpen={isShareOpen}
+        folder={folder}
+        currentUserId={currentUserId}
+        onClose={() => setIsShareOpen(false)}
+        onFolderLeft={onBack}
       />
     </div>
   );

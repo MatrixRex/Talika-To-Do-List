@@ -15,7 +15,7 @@ import {
 import { db } from './firebase';
 import { generateKeyBetween } from './sort-keys';
 import { validateItemContext } from './schema';
-import type { Item, Folder, Reminder } from './schema';
+import type { Item, Folder, Reminder, User } from './schema';
 
 const BATCH_LIMIT = 500;
 
@@ -492,4 +492,100 @@ export async function shareFolder(
   }
 
   return { strippedCount };
+}
+
+export async function lookupUserByEmail(email: string): Promise<User | null> {
+  const trimmed = email.trim().toLowerCase();
+  if (!trimmed) return null;
+  const usersRef = collection(db, 'users');
+  const q = query(usersRef, where('email', '==', trimmed));
+  const snap = await getDocs(q);
+  if (!snap.empty) {
+    return snap.docs[0].data() as User;
+  }
+  const qRaw = query(usersRef, where('email', '==', email.trim()));
+  const snapRaw = await getDocs(qRaw);
+  if (!snapRaw.empty) {
+    return snapRaw.docs[0].data() as User;
+  }
+  return null;
+}
+
+export async function fetchUsersByIds(uids: string[]): Promise<User[]> {
+  if (!uids || uids.length === 0) return [];
+  const users: User[] = [];
+  for (const uid of uids) {
+    const snap = await getDoc(doc(db, 'users', uid));
+    if (snap.exists()) {
+      users.push(snap.data() as User);
+    }
+  }
+  return users;
+}
+
+export async function revokeFolderMember(
+  folderId: string,
+  memberIdToRemove: string,
+  actorId: string
+): Promise<void> {
+  const folderRef = doc(db, 'folders', folderId);
+  const folderSnap = await getDoc(folderRef);
+  if (!folderSnap.exists()) throw new Error('Folder not found');
+
+  const folder = folderSnap.data() as Folder;
+  const newMemberIds = folder.memberIds.filter((id) => id !== memberIdToRemove);
+  const newRoles = { ...folder.roles };
+  delete newRoles[memberIdToRemove];
+
+  const now = Timestamp.now();
+  const itemsRef = collection(db, 'items');
+  const q = query(itemsRef, where('folderId', '==', folderId));
+  const snap = await getDocs(q);
+
+  let currentBatch = writeBatch(db);
+  let opCount = 0;
+
+  currentBatch.update(folderRef, {
+    memberIds: newMemberIds,
+    roles: newRoles,
+    updatedAt: now,
+  });
+  opCount++;
+
+  for (const itemDoc of snap.docs) {
+    currentBatch.update(itemDoc.ref, {
+      memberIds: newMemberIds,
+      updatedAt: now,
+      updatedBy: actorId,
+    });
+    opCount++;
+
+    if (opCount >= BATCH_LIMIT) {
+      await currentBatch.commit();
+      currentBatch = writeBatch(db);
+      opCount = 0;
+    }
+  }
+
+  if (opCount > 0) {
+    await currentBatch.commit();
+  }
+}
+
+export async function leaveFolder(folderId: string, actorId: string): Promise<void> {
+  await revokeFolderMember(folderId, actorId, actorId);
+}
+
+export async function countFolderReminders(folderId: string): Promise<number> {
+  const itemsRef = collection(db, 'items');
+  const q = query(itemsRef, where('folderId', '==', folderId));
+  const snap = await getDocs(q);
+  let count = 0;
+  for (const docSnap of snap.docs) {
+    const data = docSnap.data() as Item;
+    if (data.reminder !== null) {
+      count++;
+    }
+  }
+  return count;
 }

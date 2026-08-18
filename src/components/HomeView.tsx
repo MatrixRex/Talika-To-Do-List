@@ -30,6 +30,7 @@ import {
 interface HomeViewProps {
   items: Item[];
   folders: Folder[];
+  currentUserId?: string;
   onSelectFolder: (id: string | null) => void;
   onCreateTask: (title: string, parentId?: string) => void;
   onCompleteTask: (id: string, done: boolean) => void;
@@ -50,6 +51,7 @@ interface HomeViewProps {
 export function HomeView({
   items,
   folders,
+  currentUserId = '',
   onSelectFolder,
   onCreateTask,
   onCompleteTask,
@@ -230,6 +232,7 @@ export function HomeView({
               folders={folders}
               items={items}
               activeFolderId={null}
+              currentUserId={currentUserId}
               onSelectFolder={onSelectFolder}
               onCreateFolder={onCreateFolder}
               onRenameFolder={onRenameFolder}

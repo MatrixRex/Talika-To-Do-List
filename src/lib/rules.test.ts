@@ -68,17 +68,17 @@ describe('Firestore Security Rules Unit Tests (Stage 3 Exit Suite)', () => {
       await assertSucceeds(getDoc(aliceRef));
     });
 
-    it('denies a user from reading or writing another user document', async () => {
+    it('allows authenticated user to read user document for email lookup, but denies modifying another user document', async () => {
       // Seed alice document via admin context
       await testEnv.withSecurityRulesDisabled(async (adminContext) => {
         const db = adminContext.firestore();
-        await setDoc(doc(db, 'users', 'alice'), { uid: 'alice' });
+        await setDoc(doc(db, 'users', 'alice'), { uid: 'alice', email: 'alice@example.com', displayName: 'Alice' });
       });
 
       const bobDb = testEnv.authenticatedContext('bob').firestore();
       const aliceRef = doc(bobDb, 'users', 'alice');
 
-      await assertFails(getDoc(aliceRef));
+      await assertSucceeds(getDoc(aliceRef));
       await assertFails(setDoc(aliceRef, { uid: 'alice', displayName: 'Hacked' }));
     });
 
@@ -392,6 +392,63 @@ describe('Firestore Security Rules Unit Tests (Stage 3 Exit Suite)', () => {
           completedAt: null,
           sortKey: 's0',
           reminder: null,
+        })
+      );
+    });
+
+    it('denies revoked member from reading or updating items', async () => {
+      // Seed item in folder shared between Alice and Bob
+      await testEnv.withSecurityRulesDisabled(async (adminContext) => {
+        const db = adminContext.firestore();
+        await setDoc(doc(db, 'items', 'item-revoked-test'), {
+          id: 'item-revoked-test',
+          folderId: 'folder-shared',
+          parentId: null,
+          ownerId: 'alice',
+          memberIds: ['alice'], // Bob has been revoked
+          title: 'Alice Private After Revoke',
+          done: false,
+          completedAt: null,
+          sortKey: 'a0',
+          reminder: null,
+        });
+      });
+
+      const bobDb = testEnv.authenticatedContext('bob').firestore();
+      const itemRef = doc(bobDb, 'items', 'item-revoked-test');
+
+      // Bob's read and write must both be denied
+      await assertFails(getDoc(itemRef));
+      await assertFails(updateDoc(itemRef, { title: 'Bob Trying To Edit' }));
+    });
+
+    it('allows editor to reorder and update task properties in shared folder', async () => {
+      // Seed item where bob is member
+      await testEnv.withSecurityRulesDisabled(async (adminContext) => {
+        const db = adminContext.firestore();
+        await setDoc(doc(db, 'items', 'item-collab-1'), {
+          id: 'item-collab-1',
+          folderId: 'folder-shared',
+          parentId: null,
+          ownerId: 'alice',
+          memberIds: ['alice', 'bob'],
+          title: 'Team Collab Task',
+          done: false,
+          completedAt: null,
+          sortKey: 'a0',
+          reminder: null,
+        });
+      });
+
+      const bobDb = testEnv.authenticatedContext('bob').firestore();
+      const itemRef = doc(bobDb, 'items', 'item-collab-1');
+
+      // Bob can mark done and update sortKey
+      await assertSucceeds(
+        updateDoc(itemRef, {
+          done: true,
+          completedAt: serverTimestamp(),
+          sortKey: 'a0.5',
         })
       );
     });

@@ -52,6 +52,7 @@ export function TaskItem({
   const [isMoveOpen, setIsMoveOpen] = useState(false);
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [pendingMoveTarget, setPendingMoveTarget] = useState<{ id: string | null; name: string } | null>(null);
+  const [isMoveOutConfirmOpen, setIsMoveOutConfirmOpen] = useState(false);
 
   const {
     attributes,
@@ -95,8 +96,11 @@ export function TaskItem({
     const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) : null;
     const isTargetShared = targetFolder && targetFolder.memberIds.length > 1;
 
-    if (item.reminder && isTargetShared) {
-      // Prompt warning confirmation
+    if (item.memberIds.length > 1 && targetFolderId === null) {
+      // Moving out of shared folder to private inbox (§5 claim semantics)
+      setIsMoveOutConfirmOpen(true);
+    } else if (item.reminder && isTargetShared) {
+      // Prompt reminder warning confirmation (§4)
       setPendingMoveTarget({
         id: targetFolderId,
         name: targetFolder?.name || 'Shared Folder',
@@ -104,6 +108,11 @@ export function TaskItem({
     } else {
       onMoveToFolder(item.id, targetFolderId);
     }
+  };
+
+  const confirmMoveOut = () => {
+    setIsMoveOutConfirmOpen(false);
+    onMoveToFolder(item.id, null);
   };
 
   const confirmMoveIntoShared = () => {
@@ -371,6 +380,24 @@ export function TaskItem({
             </Button>
             <Button variant="danger" onClick={confirmMoveIntoShared}>
               Move & Remove Reminder
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* §5: Move out of shared folder claim confirmation dialog */}
+      <Dialog isOpen={isMoveOutConfirmOpen} onClose={() => setIsMoveOutConfirmOpen(false)}>
+        <div className="flex flex-col gap-3">
+          <h3 className="text-lg font-bold text-text">Move to your private list?</h3>
+          <p className="text-sm text-text-muted">
+            This moves the task to your private list and removes it for {item.memberIds.length - 1} other {item.memberIds.length - 1 === 1 ? 'person' : 'people'}.
+          </p>
+          <div className="flex justify-end gap-2 mt-3">
+            <Button variant="ghost" onClick={() => setIsMoveOutConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={confirmMoveOut}>
+              Claim & Move
             </Button>
           </div>
         </div>

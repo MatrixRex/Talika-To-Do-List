@@ -15,6 +15,7 @@ import {
   getFolderColorStyle
 } from '../ui';
 import { FolderCustomizeDialog } from './FolderCustomizeDialog';
+import { ShareFolderDialog } from './ShareFolderDialog';
 import {
   DndContext,
   closestCenter,
@@ -35,6 +36,7 @@ interface FolderGridProps {
   folders: Folder[];
   items: Item[];
   activeFolderId: string | null;
+  currentUserId?: string;
   onSelectFolder: (id: string | null) => void;
   onCreateFolder: (name: string) => void;
   onRenameFolder: (id: string, newName: string) => void;
@@ -47,6 +49,7 @@ export function FolderGrid({
   folders,
   items,
   activeFolderId,
+  currentUserId = '',
   onSelectFolder,
   onCreateFolder,
   onRenameFolder,
@@ -57,6 +60,7 @@ export function FolderGrid({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [customizingFolder, setCustomizingFolder] = useState<Folder | null>(null);
+  const [sharingFolder, setSharingFolder] = useState<Folder | null>(null);
 
   const sortedFolders = useMemo(() => {
     return [...folders].sort(compareSortKeys);
@@ -134,6 +138,7 @@ export function FolderGrid({
                 onRename={(newName) => onRenameFolder(folder.id, newName)}
                 onDelete={() => onDeleteFolder(folder.id)}
                 onCustomize={() => setCustomizingFolder(folder)}
+                onShare={() => setSharingFolder(folder)}
               />
             ))}
 
@@ -177,6 +182,14 @@ export function FolderGrid({
           }
         }}
       />
+
+      {/* Share Folder Dialog */}
+      <ShareFolderDialog
+        isOpen={sharingFolder !== null}
+        folder={sharingFolder}
+        currentUserId={currentUserId}
+        onClose={() => setSharingFolder(null)}
+      />
     </div>
   );
 }
@@ -188,7 +201,8 @@ function SortableFolderCard({
   onSelect,
   onRename,
   onDelete,
-  onCustomize
+  onCustomize,
+  onShare
 }: {
   folder: Folder;
   itemCount: number;
@@ -197,6 +211,7 @@ function SortableFolderCard({
   onRename: (newName: string) => void;
   onDelete: () => void;
   onCustomize: () => void;
+  onShare: () => void;
 }) {
   const {
     attributes,
@@ -213,6 +228,7 @@ function SortableFolderCard({
 
   const colorStyle = getFolderColorStyle(folder.color);
   const iconName = (folder.icon as IconName) || 'folder';
+  const isShared = folder.memberIds && folder.memberIds.length > 1;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -238,7 +254,15 @@ function SortableFolderCard({
         onClick={onSelect}
       >
         <div className="flex items-start justify-between">
-          <Icon name={iconName} className="shrink-0" />
+          <div className="flex items-center gap-1.5">
+            <Icon name={iconName} className="shrink-0" />
+            {isShared && (
+              <span className="flex items-center text-[11px] opacity-80 gap-0.5 px-1.5 py-0.5 rounded-full bg-surface" title={`Shared with ${folder.memberIds.length} members`}>
+                <Icon name="user" />
+                <span className="text-[10px]">{folder.memberIds.length}</span>
+              </span>
+            )}
+          </div>
           <div className="relative" onClick={(e) => e.stopPropagation()}>
             <IconButton
               aria-label="Folder actions"
@@ -248,6 +272,15 @@ function SortableFolderCard({
             </IconButton>
             <Menu isOpen={menuOpen} onClose={() => setMenuOpen(false)}>
               <div className="flex flex-col">
+                <MenuItem
+                  icon={<Icon name="share" />}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onShare();
+                  }}
+                >
+                  Share
+                </MenuItem>
                 <MenuItem
                   icon={<Icon name="palette" />}
                   onClick={() => {
