@@ -16,6 +16,7 @@ import {
   updateFolder
 } from './lib/db';
 import { generateKeyBetween } from './lib/sort-keys';
+import { generateUUID } from './lib/uuid';
 import type { Item, Folder, Reminder } from './lib/schema';
 import { rescheduleAllReminders } from './lib/notifications';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -91,7 +92,7 @@ function MainApp() {
     const lastKey = folders.length > 0 ? folders[folders.length - 1].sortKey : null;
     const sortKey = generateKeyBetween(lastKey, null);
     await createFolder({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       ownerId: firebaseUser.uid,
       name,
       icon: 'folder',
@@ -131,7 +132,7 @@ function MainApp() {
     const memberIds = targetFolder ? targetFolder.memberIds : [firebaseUser.uid];
 
     await createItem({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       folderId: targetFolderId,
       parentId: parentId || null,
       ownerId: firebaseUser.uid,

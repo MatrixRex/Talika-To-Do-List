@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { generateKeyBetween } from './sort-keys';
+import { generateUUID } from './uuid';
 import { validateItemContext } from './schema';
 import type { Item, Folder, Reminder, User } from './schema';
 
@@ -168,7 +169,7 @@ export async function duplicateItem(itemId: string): Promise<string> {
   
   const original = itemSnap.data() as Item;
   const now = Timestamp.now();
-  const newId = crypto.randomUUID();
+  const newId = generateUUID();
   const lastKey = await lastKeyIn(original.folderId, original.parentId);
   const newSortKey = generateKeyBetween(lastKey, null);
 
@@ -189,7 +190,7 @@ export async function duplicateItem(itemId: string): Promise<string> {
 
   let prevSubKey: string | null = null;
   for (const sub of subtasks) {
-    const newSubId = crypto.randomUUID();
+    const newSubId = generateUUID();
     const newSubSortKey = generateKeyBetween(prevSubKey, null);
     prevSubKey = newSubSortKey;
 
