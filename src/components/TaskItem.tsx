@@ -136,44 +136,48 @@ export function TaskItem({
           setMenuOpen(true);
         }}
       >
-        {/* Drag Handle */}
-        {isSortable && (
-          <div
-            {...attributes}
-            {...listeners}
-            className="p-1 -ml-1 text-text-muted hover:text-text cursor-grab active:cursor-grabbing touch-none shrink-0"
-            onClick={(e) => e.stopPropagation()}
-            aria-label="Drag to reorder"
-          >
-            <Icon name="gripVertical" />
-          </div>
-        )}
+        <div className="flex items-center gap-0 -space-x-1 shrink-0 -ml-2">
+          {/* Drag Handle */}
+          {isSortable && (
+            <div
+              {...attributes}
+              {...listeners}
+              className="p-1 text-text-muted hover:text-text cursor-grab active:cursor-grabbing touch-none shrink-0"
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Drag to reorder"
+            >
+              <Icon name="gripVertical" />
+            </div>
+          )}
 
-        {/* Chevron for subtask expand/collapse */}
-        {subtasks.length > 0 ? (
+          {/* Chevron for subtask expand/collapse */}
+          {subtasks.length > 0 ? (
+            <IconButton
+              className="!p-1 min-w-0 min-h-0"
+              aria-label={isExpanded ? "Collapse subtasks" : "Expand subtasks"}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded(!isExpanded);
+              }}
+            >
+              <Icon name={isExpanded ? 'chevronDown' : 'chevronRight'} />
+            </IconButton>
+          ) : (
+            <div className="w-6 shrink-0" />
+          )}
+
+          {/* Completion Checkbox */}
           <IconButton
-            aria-label={isExpanded ? "Collapse subtasks" : "Expand subtasks"}
+            className="!p-1 min-w-0 min-h-0"
+            aria-label={item.done ? "Mark incomplete" : "Mark complete"}
             onClick={(e) => {
               e.stopPropagation();
-              setIsExpanded(!isExpanded);
+              onComplete(item.id, !item.done);
             }}
           >
-            <Icon name={isExpanded ? 'chevronDown' : 'chevronRight'} />
+            <Icon name={item.done ? 'check' : 'circle'} className={item.done ? 'text-accent' : 'text-text-muted'} />
           </IconButton>
-        ) : (
-          <div className="w-6 shrink-0" />
-        )}
-
-        {/* Completion Checkbox */}
-        <IconButton
-          aria-label={item.done ? "Mark incomplete" : "Mark complete"}
-          onClick={(e) => {
-            e.stopPropagation();
-            onComplete(item.id, !item.done);
-          }}
-        >
-          <Icon name={item.done ? 'check' : 'circle'} className={item.done ? 'text-accent' : 'text-text-muted'} />
-        </IconButton>
+        </div>
 
         {/* Task Title & Badges */}
         <div

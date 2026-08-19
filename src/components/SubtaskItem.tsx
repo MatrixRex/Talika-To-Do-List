@@ -26,14 +26,19 @@ export function SubtaskItem({ subtask, onComplete, onRename, onDelete, onPromote
   return (
     <div className="flex flex-col">
       <ListRow className={`pl-6 ${subtask.done ? 'opacity-60' : ''}`}>
-        <Icon name="cornerDownRight" className="text-text-muted shrink-0" />
-        
-        <IconButton
-          aria-label={subtask.done ? "Mark incomplete" : "Mark complete"}
-          onClick={() => onComplete(subtask.id, !subtask.done)}
-        >
-          <Icon name={subtask.done ? 'check' : 'circle'} className={subtask.done ? 'text-accent' : 'text-text-muted'} />
-        </IconButton>
+        <div className="flex items-center gap-0 -space-x-1 shrink-0">
+          <div className="p-1 shrink-0">
+            <Icon name="cornerDownRight" className="text-text-muted" />
+          </div>
+          
+          <IconButton
+            className="!p-1 min-w-0 min-h-0"
+            aria-label={subtask.done ? "Mark incomplete" : "Mark complete"}
+            onClick={() => onComplete(subtask.id, !subtask.done)}
+          >
+            <Icon name={subtask.done ? 'check' : 'circle'} className={subtask.done ? 'text-accent' : 'text-text-muted'} />
+          </IconButton>
+        </div>
 
         <span className={`flex-1 truncate ${subtask.done ? 'line-through text-text-muted' : 'text-text'}`}>
           {subtask.title}
