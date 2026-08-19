@@ -29,36 +29,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let unsubProfile: (() => void) | null = null;
 
-    const unsubAuth = onAuthStateChanged(auth, async (user) => {
-      setFirebaseUser(user);
-      if (user) {
-        try {
-          const profile = await syncUserProfile(user);
-          setUserProfile(profile);
-
-          // Listen to live changes to user profile (e.g. preferences)
-          unsubProfile = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
-            if (docSnap.exists()) {
-              setUserProfile({
-                ...docSnap.data(),
-                uid: user.uid,
-              } as User);
-            }
-          });
-        } catch (err) {
-          console.error('Failed to load user profile:', err);
-        }
-      } else {
-        setUserProfile(null);
-        if (unsubProfile) {
-          unsubProfile();
-          unsubProfile = null;
-        }
-      }
+    // Safety fallback: ensure initial loading resolves even on slow/offline connections
+    const fallbackTimer = setTimeout(() => {
       setLoading(false);
-    });
+    }, 1500);
+
+    const unsubAuth = onAuthStateChanged(
+      auth,
+      async (user) => {
+        clearTimeout(fallbackTimer);
+        setFirebaseUser(user);
+        setLoading(false);
+
+        if (user) {
+          try {
+            const profile = await syncUserProfile(user);
+            setUserProfile(profile);
+
+            // Listen to live changes to user profile (e.g. preferences)
+            unsubProfile = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
+              if (docSnap.exists()) {
+                setUserProfile({
+                  ...docSnap.data(),
+                  uid: user.uid,
+                } as User);
+              }
+            });
+          } catch (err) {
+            console.error('Failed to load user profile:', err);
+          }
+        } else {
+          setUserProfile(null);
+          if (unsubProfile) {
+            unsubProfile();
+            unsubProfile = null;
+          }
+        }
+      },
+      (error) => {
+        console.error('onAuthStateChanged error:', error);
+        clearTimeout(fallbackTimer);
+        setLoading(false);
+      }
+    );
 
     return () => {
+      clearTimeout(fallbackTimer);
       unsubAuth();
       if (unsubProfile) unsubProfile();
     };

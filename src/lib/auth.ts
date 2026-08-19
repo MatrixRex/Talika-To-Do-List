@@ -88,14 +88,17 @@ export async function signOutUser(): Promise<void> {
  */
 export async function syncUserProfile(firebaseUser: FirebaseUser): Promise<User> {
   const userRef = doc(db, 'users', firebaseUser.uid);
-  const userSnap = await getDoc(userRef);
-
-  if (userSnap.exists()) {
-    const raw = userSnap.data();
-    return UserSchema.parse({
-      ...raw,
-      uid: firebaseUser.uid,
-    });
+  try {
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+      const raw = userSnap.data();
+      return UserSchema.parse({
+        ...raw,
+        uid: firebaseUser.uid,
+      });
+    }
+  } catch (err) {
+    console.warn('Could not read user profile from Firestore, using defaults:', err);
   }
 
   // First sign-in: initialize user profile document with default preferences
@@ -114,7 +117,11 @@ export async function syncUserProfile(firebaseUser: FirebaseUser): Promise<User>
   };
 
   const validated = UserSchema.parse(initialUser);
-  await setDoc(userRef, validated);
+  try {
+    await setDoc(userRef, validated);
+  } catch (err) {
+    console.warn('Could not write initial user profile to Firestore:', err);
+  }
   return validated;
 }
 
