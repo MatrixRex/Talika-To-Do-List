@@ -39,7 +39,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run tests & validation
-        run: pnpm test --run
+        run: pnpm test:ci
 
       - name: Build PWA
         env:
