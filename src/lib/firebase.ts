@@ -18,14 +18,16 @@ export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
+const emulatorHost = (typeof window !== 'undefined' && window.location.hostname) ? window.location.hostname : '127.0.0.1';
+
 if (useEmulator && typeof window !== 'undefined') {
   try {
-    connectFirestoreEmulator(db, '127.0.0.1', 8080);
+    connectFirestoreEmulator(db, emulatorHost, 8080);
   } catch {
     // ignore if already connected
   }
   try {
-    connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+    connectAuthEmulator(auth, `http://${emulatorHost}:9099`, { disableWarnings: true });
   } catch {
     // ignore if already connected
   }
