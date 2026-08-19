@@ -5,7 +5,7 @@ import { Button } from '../ui/Button';
 import { Icon } from '../ui/icons';
 
 export function LoginView() {
-  const { signIn } = useAuth();
+  const { signIn, signInDemo } = useAuth();
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,7 +16,20 @@ export function LoginView() {
       await signIn();
     } catch (err) {
       console.error(err);
-      setError('Could not sign in with Google. Please try again.');
+      setError('Could not sign in with Google. Please try again or use Quick Demo Sign-In.');
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  const handleDemoSignIn = async () => {
+    try {
+      setSigningIn(true);
+      setError(null);
+      await signInDemo();
+    } catch (err) {
+      console.error(err);
+      setError('Demo sign-in failed. Please verify emulator is running.');
     } finally {
       setSigningIn(false);
     }
@@ -42,15 +55,27 @@ export function LoginView() {
           </div>
         )}
 
-        <Button
-          onClick={handleSignIn}
-          disabled={signingIn}
-          variant="primary"
-          className="w-full gap-2"
-        >
-          <Icon name="logIn" />
-          <span>{signingIn ? 'Signing in…' : 'Sign in with Google'}</span>
-        </Button>
+        <div className="w-full flex flex-col gap-3">
+          <Button
+            onClick={handleSignIn}
+            disabled={signingIn}
+            variant="primary"
+            className="w-full gap-2"
+          >
+            <Icon name="logIn" />
+            <span>{signingIn ? 'Signing in…' : 'Sign in with Google'}</span>
+          </Button>
+
+          <Button
+            onClick={handleDemoSignIn}
+            disabled={signingIn}
+            variant="secondary"
+            className="w-full gap-2"
+          >
+            <Icon name="user" />
+            <span>{signingIn ? 'Signing in…' : 'Quick Demo Sign-In'}</span>
+          </Button>
+        </div>
       </Card>
     </div>
   );

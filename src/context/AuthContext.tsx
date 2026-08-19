@@ -4,6 +4,8 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import {
   signInWithGoogle,
+  signInAsDemoUser,
+  getRedirectResult,
   signOutUser,
   syncUserProfile,
   updateUserPreferences
@@ -15,6 +17,7 @@ interface AuthContextType {
   userProfile: User | null;
   loading: boolean;
   signIn: () => Promise<void>;
+  signInDemo: (email?: string) => Promise<void>;
   signOut: () => Promise<void>;
   updatePrefs: (prefs: Partial<UserPrefs>) => Promise<void>;
 }
@@ -28,6 +31,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let unsubProfile: (() => void) | null = null;
+
+    // Check for redirect sign-in result (mobile browser fallback)
+    getRedirectResult(auth)
+      .then(async (cred) => {
+        if (cred?.user) {
+          setFirebaseUser(cred.user);
+          const profile = await syncUserProfile(cred.user);
+          setUserProfile(profile);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('getRedirectResult notice:', err);
+      });
 
     // Safety fallback: ensure initial loading resolves even on slow/offline connections
     const fallbackTimer = setTimeout(() => {
@@ -83,11 +100,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleSignIn = async () => {
     setLoading(true);
     try {
-      await signInWithGoogle();
+      const cred = await signInWithGoogle();
+      if (cred?.user) {
+        setFirebaseUser(cred.user);
+        const profile = await syncUserProfile(cred.user);
+        setUserProfile(profile);
+      }
     } catch (err) {
       console.error('Sign-in error:', err);
-      setLoading(false);
       throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignInDemo = async (email = 'demo@talika.app') => {
+    setLoading(true);
+    try {
+      const cred = await signInAsDemoUser(email);
+      if (cred?.user) {
+        setFirebaseUser(cred.user);
+        const profile = await syncUserProfile(cred.user);
+        setUserProfile(profile);
+      }
+    } catch (err) {
+      console.error('Demo sign-in error:', err);
+      throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -116,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userProfile,
         loading,
         signIn: handleSignIn,
+        signInDemo: handleSignInDemo,
         signOut: handleSignOut,
         updatePrefs: handleUpdatePrefs,
       }}

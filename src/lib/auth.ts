@@ -1,6 +1,10 @@
 import {
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signInWithCredential,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut,
   GoogleAuthProvider,
   type User as FirebaseUser,
@@ -67,8 +71,37 @@ export async function signInWithGoogle(): Promise<UserCredential | null> {
   }
 
   // 3. Web / PWA
-  return await signInWithPopup(auth, googleProvider);
+  try {
+    return await signInWithPopup(auth, googleProvider);
+  } catch (popupErr: any) {
+    if (popupErr?.code === 'auth/popup-blocked' || popupErr?.code === 'auth/cancelled-popup-request') {
+      console.warn('Popup blocked, falling back to signInWithRedirect:', popupErr);
+      await signInWithRedirect(auth, googleProvider);
+      return null;
+    }
+    throw popupErr;
+  }
 }
+
+/**
+ * 1-Tap instant sign-in for emulator / local mobile testing without relying on popup windows.
+ */
+export async function signInAsDemoUser(email = 'demo@talika.app', password = 'password123'): Promise<UserCredential> {
+  try {
+    return await signInWithEmailAndPassword(auth, email, password);
+  } catch (err: any) {
+    if (
+      err.code === 'auth/user-not-found' ||
+      err.code === 'auth/invalid-credential' ||
+      err.code === 'auth/invalid-email'
+    ) {
+      return await createUserWithEmailAndPassword(auth, email, password);
+    }
+    throw err;
+  }
+}
+
+export { getRedirectResult };
 
 /**
  * Sign out and clear local IndexedDB cache per SPEC.md Stage 3 exit criterion.
