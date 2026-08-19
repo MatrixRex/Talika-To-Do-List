@@ -1,6 +1,10 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useState, useLayoutEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { calculateMenuPosition, type MenuPosition } from './menu-position';
+
+export type { MenuPosition };
+
 
 export interface MenuProps {
   children: ReactNode;
@@ -11,34 +15,92 @@ export interface MenuProps {
 
 export function Menu({ children, isOpen, onClose, className }: MenuProps) {
   const anchorRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ top: 0, right: 0 });
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<MenuPosition>({ top: 0, right: 0 });
+  const [isPositioned, setIsPositioned] = useState(false);
 
-  useEffect(() => {
-    if (isOpen && anchorRef.current) {
-      const rect = anchorRef.current.getBoundingClientRect();
-      setPosition({
-        top: rect.top,
-        right: window.innerWidth - rect.right,
-      });
+  const updatePosition = useCallback(() => {
+    if (!anchorRef.current) return;
+
+    const anchorEl = anchorRef.current;
+    const parentEl = anchorEl.parentElement;
+    const triggerRect = parentEl
+      ? parentEl.getBoundingClientRect()
+      : anchorEl.getBoundingClientRect();
+
+    const viewportDimensions = {
+      width: window.innerWidth,
+      height: window.innerHeight,
+    };
+
+    const menuEl = menuRef.current;
+    const menuDimensions = {
+      width: menuEl?.offsetWidth || 160,
+      height: menuEl?.offsetHeight || 180,
+    };
+
+    const calculated = calculateMenuPosition(
+      triggerRect,
+      menuDimensions,
+      viewportDimensions,
+      8,
+      4
+    );
+
+    setPosition(calculated);
+    setIsPositioned(true);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (isOpen) {
+      setIsPositioned(false);
+      updatePosition();
+
+      const handleScrollOrResize = () => {
+        updatePosition();
+      };
+
+      window.addEventListener('resize', handleScrollOrResize);
+      window.addEventListener('scroll', handleScrollOrResize, true);
+
+      return () => {
+        window.removeEventListener('resize', handleScrollOrResize);
+        window.removeEventListener('scroll', handleScrollOrResize, true);
+      };
+    } else {
+      setIsPositioned(false);
     }
-  }, [isOpen]);
+  }, [isOpen, updatePosition]);
 
   return (
     <>
       <div ref={anchorRef} className="absolute right-0 top-full" aria-hidden="true" />
-      {isOpen && createPortal(
-        <>
-          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); onClose(); }} />
-          <div 
-            className={`fixed mt-1 z-50 bg-surface-elevated text-text rounded-md shadow-lg border border-surface-border p-1 min-w-menu ${className || ''}`}
-            style={{ top: position.top, right: position.right }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {children}
-          </div>
-        </>,
-        document.body
-      )}
+      {isOpen &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
+            />
+            <div
+              ref={menuRef}
+              className={`fixed z-50 bg-surface-elevated text-text rounded-md shadow-lg border border-surface-border p-1 min-w-menu overflow-y-auto ${className || ''}`}
+              style={{
+                top: position.top,
+                right: position.right,
+                maxHeight: 'calc(100vh - 16px)',
+                opacity: isPositioned ? 1 : 0,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {children}
+            </div>
+          </>,
+          document.body
+        )}
     </>
   );
 }
