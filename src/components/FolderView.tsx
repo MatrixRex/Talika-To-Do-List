@@ -7,6 +7,7 @@ import {
   type InputMode,
   type AppContext
 } from '../lib/unified-input';
+import { useEdgeSwipeBack } from '../lib/useEdgeSwipeBack';
 import {
   Button,
   Input,
@@ -168,8 +169,16 @@ export function FolderView({
     setIsRenameOpen(false);
   };
 
+  const edgeSwipe = useEdgeSwipeBack({ onBack });
+
   return (
-    <div className="flex flex-col h-full w-full bg-background overflow-hidden">
+    <div
+      className="flex flex-col h-full w-full bg-background overflow-hidden relative"
+      onTouchStart={edgeSwipe.handleTouchStart}
+      onTouchMove={edgeSwipe.handleTouchMove}
+      onTouchEnd={edgeSwipe.handleTouchEnd}
+      style={edgeSwipe.style}
+    >
       {/* Folder Header */}
       <div
         className="p-4 border-b min-h-header flex items-center justify-between shrink-0 transition-colors duration-fast"

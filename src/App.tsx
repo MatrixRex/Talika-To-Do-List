@@ -70,6 +70,61 @@ function MainApp() {
     }
   }, [items]);
 
+  // Synchronize folder navigation with browser history for back gesture & button support
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      const state = e.state as { folderId?: string | null } | null;
+      setActiveFolderId(state?.folderId || null);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Handle Capacitor Android hardware back button
+  useEffect(() => {
+    let removeListener: (() => void) | undefined;
+    import('@capacitor/app')
+      .then(({ App: CapApp }) => {
+        return CapApp.addListener('backButton', ({ canGoBack }) => {
+          if (activeFolderId) {
+            handleBackToHome();
+          } else if (canGoBack) {
+            window.history.back();
+          } else {
+            CapApp.exitApp();
+          }
+        });
+      })
+      .then((handle) => {
+        if (handle) {
+          removeListener = () => handle.remove();
+        }
+      })
+      .catch(() => {
+        // Non-Capacitor environment
+      });
+
+    return () => {
+      if (removeListener) removeListener();
+    };
+  }, [activeFolderId]);
+
+  const handleSelectFolder = (id: string | null) => {
+    if (id) {
+      window.history.pushState({ folderId: id }, '', `#folder-${id}`);
+    }
+    setActiveFolderId(id);
+  };
+
+  const handleBackToHome = () => {
+    if (window.history.state?.folderId) {
+      window.history.back();
+    } else {
+      setActiveFolderId(null);
+    }
+  };
+
   if (loading) {
     return (
       <main className="h-dvh w-screen flex items-center justify-center bg-background text-text-muted">
@@ -108,7 +163,7 @@ function MainApp() {
   };
 
   const handleDeleteFolder = async (id: string) => {
-    if (activeFolderId === id) setActiveFolderId(null);
+    if (activeFolderId === id) handleBackToHome();
     await deleteFolder(id);
   };
 
@@ -197,7 +252,7 @@ function MainApp() {
             items={items}
             folders={folders}
             currentUserId={firebaseUser.uid}
-            onBack={() => setActiveFolderId(null)}
+            onBack={handleBackToHome}
             onCreateTask={handleCreateTask}
             onCompleteTask={handleCompleteTask}
             onRenameTask={handleRenameTask}
@@ -216,7 +271,7 @@ function MainApp() {
             items={items}
             folders={folders}
             currentUserId={firebaseUser.uid}
-            onSelectFolder={setActiveFolderId}
+            onSelectFolder={handleSelectFolder}
             onCreateTask={handleCreateTask}
             onCompleteTask={handleCompleteTask}
             onRenameTask={handleRenameTask}
