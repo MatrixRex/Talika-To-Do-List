@@ -135,8 +135,6 @@ export function HomeView({
   const handleSubmit = (text: string, currentMode: InputMode) => {
     if (currentMode === 'Create') {
       onCreateTask(text);
-    } else if (currentMode === 'Folder') {
-      onCreateFolder(text);
     } else if (currentMode === 'Subtask') {
       if (selectedTaskId) {
         onCreateTask(text, selectedTaskId);

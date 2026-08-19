@@ -127,8 +127,7 @@ export function UnifiedInput({
 
   const getSubmitIconName = () => {
     switch (mode) {
-      case 'Folder':
-        return 'folderPlus';
+
       case 'Search':
         return 'search';
       case 'Subtask':

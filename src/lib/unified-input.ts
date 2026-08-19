@@ -1,6 +1,6 @@
 import type { Item, Folder } from './schema';
 
-export type InputMode = 'Create' | 'Folder' | 'Subtask' | 'Search';
+export type InputMode = 'Create' | 'Subtask' | 'Search';
 
 export interface AppContext {
   folderId: string | null;
@@ -18,7 +18,7 @@ export function getContextModes(context: AppContext): InputMode[] {
     return ['Subtask', 'Search'];
   }
   if (context.folderId === null) {
-    return ['Create', 'Folder', 'Search'];
+    return ['Create', 'Search'];
   }
   return ['Create', 'Search'];
 }
@@ -37,8 +37,7 @@ export function getModePlaceholder(mode: InputMode, parentTaskTitle?: string | n
   switch (mode) {
     case 'Create':
       return 'New task…';
-    case 'Folder':
-      return 'New folder…';
+
     case 'Subtask':
       return parentTaskTitle ? `New subtask for "${parentTaskTitle}"…` : 'New subtask…';
     case 'Search':

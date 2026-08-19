@@ -45,9 +45,9 @@ describe('Stage 5: Unified Input & Context Rules (Exit Suite)', () => {
   });
 
   describe('1. Mode Matrix (§6 Context)', () => {
-    it('returns [Create, Folder, Search] for Home screen {folderId: null, parentId: null}', () => {
+    it('returns [Create, Search] for Home screen {folderId: null, parentId: null}', () => {
       const context: AppContext = { folderId: null, parentId: null };
-      expect(getContextModes(context)).toEqual(['Create', 'Folder', 'Search']);
+      expect(getContextModes(context)).toEqual(['Create', 'Search']);
       expect(getDefaultModeForContext(context)).toBe('Create');
     });
 
@@ -73,7 +73,6 @@ describe('Stage 5: Unified Input & Context Rules (Exit Suite)', () => {
   describe('2. Mode Placeholders (§8 Unified Input)', () => {
     it('returns correct indicator placeholder text for each mode', () => {
       expect(getModePlaceholder('Create')).toBe('New task…');
-      expect(getModePlaceholder('Folder')).toBe('New folder…');
       expect(getModePlaceholder('Subtask')).toBe('New subtask…');
       expect(getModePlaceholder('Search')).toBe('Search…');
     });
@@ -81,14 +80,12 @@ describe('Stage 5: Unified Input & Context Rules (Exit Suite)', () => {
 
   describe('3. Mode Cycling (Swipe & Tab Accelerator)', () => {
     it('cycles forward and backward through modes on Home view', () => {
-      const modes: InputMode[] = ['Create', 'Folder', 'Search'];
-      expect(cycleNextMode('Create', modes)).toBe('Folder');
-      expect(cycleNextMode('Folder', modes)).toBe('Search');
+      const modes: InputMode[] = ['Create', 'Search'];
+      expect(cycleNextMode('Create', modes)).toBe('Search');
       expect(cycleNextMode('Search', modes)).toBe('Create');
 
       expect(cyclePrevMode('Create', modes)).toBe('Search');
-      expect(cyclePrevMode('Search', modes)).toBe('Folder');
-      expect(cyclePrevMode('Folder', modes)).toBe('Create');
+      expect(cyclePrevMode('Search', modes)).toBe('Create');
     });
 
     it('cycles correctly within subtask context', () => {
