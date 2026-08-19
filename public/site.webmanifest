@@ -1,6 +1,6 @@
 {
-  "name": "Talika To-Do",
-  "short_name": "To-Do",
+  "name": "Talika",
+  "short_name": "Talika",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
