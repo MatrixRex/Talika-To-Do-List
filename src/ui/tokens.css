@@ -89,6 +89,13 @@
     --surface-border: color-mix(in srgb, #fff 15%, var(--background));
   }
 
+  html,
+  body,
+  #root {
+    min-height: 100dvh;
+    height: 100%;
+  }
+
   body {
     background-color: var(--background);
     color: var(--text);

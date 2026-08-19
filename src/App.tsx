@@ -71,7 +71,7 @@ function MainApp() {
 
   if (loading) {
     return (
-      <main className="h-screen w-screen flex items-center justify-center bg-background text-text-muted">
+      <main className="h-dvh w-screen flex items-center justify-center bg-background text-text-muted">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 rounded-full border-2 border-accent border-t-transparent animate-spin" />
           <p className="text-sm font-medium">Loading Talika…</p>
@@ -187,7 +187,7 @@ function MainApp() {
   };
 
   return (
-    <main className="h-screen w-screen flex flex-col overflow-hidden bg-background text-text">
+    <main className="h-dvh w-screen flex flex-col overflow-hidden bg-background text-text">
       <AuthBar />
       <div className="flex-1 overflow-hidden">
         {activeFolder ? (

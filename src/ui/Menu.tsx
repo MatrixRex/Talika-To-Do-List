@@ -91,7 +91,7 @@ export function Menu({ children, isOpen, onClose, className }: MenuProps) {
               style={{
                 top: position.top,
                 right: position.right,
-                maxHeight: 'calc(100vh - 16px)',
+                maxHeight: 'calc(100dvh - 16px)',
                 opacity: isPositioned ? 1 : 0,
               }}
               onClick={(e) => e.stopPropagation()}

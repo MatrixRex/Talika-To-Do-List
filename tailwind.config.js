@@ -35,6 +35,14 @@ export default {
       0: '0ms',
     },
     extend: {
+      height: {
+        screen: '100dvh',
+        dvh: '100dvh',
+      },
+      maxHeight: {
+        screen: '100dvh',
+        dvh: '100dvh',
+      },
       transitionTimingFunction: {
         DEFAULT: 'var(--ease)',
       },
@@ -47,6 +55,8 @@ export default {
         touch: 'var(--touch-target)',
       },
       minHeight: {
+        screen: '100dvh',
+        dvh: '100dvh',
         touch: 'var(--touch-target)',
         header: 'var(--size-header)',
         card: 'var(--size-card)',
