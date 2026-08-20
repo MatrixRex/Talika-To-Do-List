@@ -6,12 +6,12 @@ const isDev = import.meta.env.DEV;
 const useEmulator = isDev || import.meta.env.VITE_USE_EMULATOR === 'true';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCVuQllFqCzJUys3Ke1xtebpBT85iakAs4",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "talika-todo.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "talika-todo",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "talika-todo.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "747615988111",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:747615988111:web:4a1ad8716820bd040b83fa"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 export const app = initializeApp(firebaseConfig);
