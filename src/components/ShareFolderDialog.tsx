@@ -183,7 +183,7 @@ export function ShareFolderDialog({
   return (
     <>
       <Dialog isOpen={isOpen} onClose={onClose}>
-        <div className="flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
+        <div className="flex flex-col gap-4 max-h-96 overflow-y-auto">
           {/* Header */}
           <div className="flex items-center gap-3 border-b border-surface-border pb-3">
             <div
@@ -267,14 +267,14 @@ export function ShareFolderDialog({
                         <span className="text-xs font-medium text-text truncate">
                           {member.displayName || member.email} {isSelf ? '(You)' : ''}
                         </span>
-                        <span className="text-[11px] text-text-muted truncate">
+                        <span className="text-xs text-text-muted truncate">
                           {member.email}
                         </span>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full ${
+                      <span className={`text-xs uppercase font-semibold px-2 py-0.5 rounded-full ${
                         isMemberOwner
                           ? 'bg-accent text-white'
                           : 'bg-surface text-text-muted border border-border'

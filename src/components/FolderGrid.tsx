@@ -257,9 +257,9 @@ function SortableFolderCard({
           <div className="flex items-center gap-1.5">
             <Icon name={iconName} className="shrink-0" />
             {isShared && (
-              <span className="flex items-center text-[11px] opacity-80 gap-0.5 px-1.5 py-0.5 rounded-full bg-surface" title={`Shared with ${folder.memberIds.length} members`}>
+              <span className="flex items-center text-xs opacity-80 gap-0.5 px-1.5 py-0.5 rounded-full bg-surface" title={`Shared with ${folder.memberIds.length} members`}>
                 <Icon name="user" />
-                <span className="text-[10px]">{folder.memberIds.length}</span>
+                <span className="text-xs">{folder.memberIds.length}</span>
               </span>
             )}
           </div>

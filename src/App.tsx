@@ -15,7 +15,7 @@ import {
   reorderFolder,
   updateFolder
 } from './lib/db';
-import { generateKeyBetween } from './lib/sort-keys';
+import { generateKeyBetween, compareSortKeys } from './lib/sort-keys';
 import { generateUUID } from './lib/uuid';
 import type { Item, Folder, Reminder } from './lib/schema';
 import { rescheduleAllReminders } from './lib/notifications';
@@ -46,7 +46,12 @@ function MainApp() {
       where('memberIds', 'array-contains', firebaseUser.uid)
     );
     const unsubItems = onSnapshot(qItems, (snap) => {
-      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Item)));
+      const serverItems = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Item));
+      setItems((prev) => {
+        const serverIds = new Set(serverItems.map((i) => i.id));
+        const pendingOptimistic = prev.filter((i) => !serverIds.has(i.id));
+        return [...serverItems, ...pendingOptimistic];
+      });
     });
 
     const qFolders = query(
@@ -54,7 +59,12 @@ function MainApp() {
       where('memberIds', 'array-contains', firebaseUser.uid)
     );
     const unsubFolders = onSnapshot(qFolders, (snap) => {
-      setFolders(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Folder)));
+      const serverFolders = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Folder));
+      setFolders((prev) => {
+        const serverIds = new Set(serverFolders.map((f) => f.id));
+        const pendingOptimistic = prev.filter((f) => !serverIds.has(f.id));
+        return [...serverFolders, ...pendingOptimistic];
+      });
     });
 
     return () => {
@@ -144,9 +154,10 @@ function MainApp() {
 
   // Folder actions
   const handleCreateFolder = async (name: string) => {
-    const lastKey = folders.length > 0 ? folders[folders.length - 1].sortKey : null;
+    const sortedFolders = [...folders].sort(compareSortKeys);
+    const lastKey = sortedFolders.length > 0 ? sortedFolders[sortedFolders.length - 1].sortKey : null;
     const sortKey = generateKeyBetween(lastKey, null);
-    await createFolder({
+    const newFolder: Folder = {
       id: generateUUID(),
       ownerId: firebaseUser.uid,
       name,
@@ -155,27 +166,78 @@ function MainApp() {
       sortKey,
       memberIds: [firebaseUser.uid],
       roles: { [firebaseUser.uid]: 'owner' },
-    });
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    };
+
+    // Optimistic UI update
+    setFolders((prev) => [...prev, newFolder]);
+
+    try {
+      await createFolder(newFolder);
+    } catch (err) {
+      console.error('Failed to create folder', err);
+      setFolders((prev) => prev.filter((f) => f.id !== newFolder.id));
+    }
   };
 
   const handleRenameFolder = async (id: string, name: string) => {
-    await updateDoc(doc(db, 'folders', id), { name, updatedAt: Timestamp.now() });
+    const prevFolders = folders;
+    setFolders((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, name, updatedAt: Timestamp.now() } : f))
+    );
+    try {
+      await updateDoc(doc(db, 'folders', id), { name, updatedAt: Timestamp.now() });
+    } catch (err) {
+      console.error('Failed to rename folder', err);
+      setFolders(prevFolders);
+    }
   };
 
   const handleDeleteFolder = async (id: string) => {
     if (activeFolderId === id) handleBackToHome();
-    await deleteFolder(id);
+    const prevFolders = folders;
+    const prevItems = items;
+    setFolders((prev) => prev.filter((f) => f.id !== id));
+    setItems((prev) => prev.filter((i) => i.folderId !== id));
+    try {
+      await deleteFolder(id);
+    } catch (err) {
+      console.error('Failed to delete folder', err);
+      setFolders(prevFolders);
+      setItems(prevItems);
+    }
   };
 
   const handleUpdateFolder = async (
     id: string,
     updates: { icon?: string; color?: string }
   ) => {
-    await updateFolder(id, updates);
+    const prevFolders = folders;
+    setFolders((prev) =>
+      prev.map((f) =>
+        f.id === id ? { ...f, ...updates, updatedAt: Timestamp.now() } : f
+      )
+    );
+    try {
+      await updateFolder(id, updates);
+    } catch (err) {
+      console.error('Failed to update folder', err);
+      setFolders(prevFolders);
+    }
   };
 
   const handleReorderFolder = async (folderId: string, newSortKey: string) => {
-    await reorderFolder(folderId, newSortKey);
+    setFolders((prev) =>
+      prev.map((f) =>
+        f.id === folderId ? { ...f, sortKey: newSortKey, updatedAt: Timestamp.now() } : f
+      )
+    );
+    try {
+      await reorderFolder(folderId, newSortKey);
+    } catch (err) {
+      console.error('Failed to reorder folder', err);
+    }
   };
 
   // Task actions
@@ -183,10 +245,18 @@ function MainApp() {
     const targetFolderId = parentId
       ? items.find((i) => i.id === parentId)?.folderId ?? activeFolderId
       : activeFolderId;
-    const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) : null;
+    const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) || null : null;
     const memberIds = targetFolder ? targetFolder.memberIds : [firebaseUser.uid];
 
-    await createItem({
+    const parentItem = parentId ? items.find((i) => i.id === parentId) || null : null;
+    const siblingItems = items
+      .filter((i) => i.folderId === targetFolderId && i.parentId === (parentId || null))
+      .sort(compareSortKeys);
+    const lastKey = siblingItems.length > 0 ? siblingItems[siblingItems.length - 1].sortKey : null;
+    const sortKey = generateKeyBetween(lastKey, null);
+    const now = Timestamp.now();
+
+    const newItem: Item = {
       id: generateUUID(),
       folderId: targetFolderId,
       parentId: parentId || null,
@@ -195,51 +265,215 @@ function MainApp() {
       title,
       done: false,
       completedAt: null,
+      sortKey,
       reminder: null,
+      createdAt: now,
+      updatedAt: now,
       updatedBy: firebaseUser.uid,
-    });
+    };
+
+    // Optimistic UI update
+    setItems((prev) => [...prev, newItem]);
+
+    try {
+      await createItem(newItem, parentItem, targetFolder);
+    } catch (err) {
+      console.error('Failed to create task', err);
+      setItems((prev) => prev.filter((i) => i.id !== newItem.id));
+    }
   };
 
   const handleCompleteTask = async (id: string, done: boolean) => {
     const now = Timestamp.now();
-    await updateDoc(doc(db, 'items', id), {
-      done,
-      completedAt: done ? now : null,
-      updatedAt: now,
-      updatedBy: firebaseUser.uid,
-    });
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === id
+          ? {
+              ...i,
+              done,
+              completedAt: done ? now : null,
+              updatedAt: now,
+              updatedBy: firebaseUser.uid,
+            }
+          : i
+      )
+    );
+    try {
+      await updateDoc(doc(db, 'items', id), {
+        done,
+        completedAt: done ? now : null,
+        updatedAt: now,
+        updatedBy: firebaseUser.uid,
+      });
+    } catch (err) {
+      console.error('Failed to complete task', err);
+    }
   };
 
   const handleRenameTask = async (id: string, title: string) => {
-    await updateDoc(doc(db, 'items', id), {
-      title,
-      updatedAt: Timestamp.now(),
-      updatedBy: firebaseUser.uid,
-    });
+    const now = Timestamp.now();
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === id
+          ? {
+              ...i,
+              title,
+              updatedAt: now,
+              updatedBy: firebaseUser.uid,
+            }
+          : i
+      )
+    );
+    try {
+      await updateDoc(doc(db, 'items', id), {
+        title,
+        updatedAt: now,
+        updatedBy: firebaseUser.uid,
+      });
+    } catch (err) {
+      console.error('Failed to rename task', err);
+    }
   };
 
   const handleDeleteTask = async (id: string) => {
-    await deleteItem(id);
+    const prevItems = items;
+    setItems((prev) => prev.filter((i) => i.id !== id && i.parentId !== id));
+    try {
+      await deleteItem(id);
+    } catch (err) {
+      console.error('Failed to delete task', err);
+      setItems(prevItems);
+    }
   };
 
   const handleDuplicateTask = async (id: string) => {
-    await duplicateItem(id);
+    try {
+      await duplicateItem(id);
+    } catch (err) {
+      console.error('Failed to duplicate task', err);
+    }
   };
 
   const handlePromoteSubtask = async (id: string) => {
-    await promoteSubtask(id);
+    const subtask = items.find((i) => i.id === id);
+    if (!subtask || !subtask.parentId) return;
+
+    const rootItems = items
+      .filter((i) => i.folderId === subtask.folderId && i.parentId === null)
+      .sort(compareSortKeys);
+    const lastKey = rootItems.length > 0 ? rootItems[rootItems.length - 1].sortKey : null;
+    const newSortKey = generateKeyBetween(lastKey, null);
+    const now = Timestamp.now();
+
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === id
+          ? {
+              ...i,
+              parentId: null,
+              sortKey: newSortKey,
+              updatedAt: now,
+              updatedBy: firebaseUser.uid,
+            }
+          : i
+      )
+    );
+
+    try {
+      await promoteSubtask(id);
+    } catch (err) {
+      console.error('Failed to promote subtask', err);
+    }
   };
 
   const handleMoveToFolder = async (itemId: string, targetFolderId: string | null) => {
-    await moveItem(itemId, targetFolderId, firebaseUser.uid);
+    const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) || null : null;
+    const newOwnerId = targetFolder ? (items.find((i) => i.id === itemId)?.ownerId || firebaseUser.uid) : firebaseUser.uid;
+    const newMemberIds = targetFolder ? targetFolder.memberIds : [firebaseUser.uid];
+    const isTargetShared = newMemberIds.length > 1;
+
+    const targetItems = items
+      .filter((i) => i.folderId === targetFolderId && i.parentId === null)
+      .sort(compareSortKeys);
+    const firstKey = targetItems.length > 0 ? targetItems[0].sortKey : null;
+    const newSortKey = generateKeyBetween(null, firstKey);
+    const now = Timestamp.now();
+
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id === itemId) {
+          return {
+            ...i,
+            folderId: targetFolderId,
+            parentId: null,
+            ownerId: newOwnerId,
+            memberIds: newMemberIds,
+            sortKey: newSortKey,
+            reminder: isTargetShared ? null : i.reminder,
+            updatedAt: now,
+            updatedBy: firebaseUser.uid,
+          };
+        }
+        if (i.parentId === itemId) {
+          return {
+            ...i,
+            folderId: targetFolderId,
+            ownerId: newOwnerId,
+            memberIds: newMemberIds,
+            updatedAt: now,
+            updatedBy: firebaseUser.uid,
+          };
+        }
+        return i;
+      })
+    );
+
+    try {
+      await moveItem(itemId, targetFolderId, firebaseUser.uid);
+    } catch (err) {
+      console.error('Failed to move item', err);
+    }
   };
 
   const handleSetReminder = async (itemId: string, reminder: Reminder | null) => {
-    await setReminder(itemId, reminder, firebaseUser.uid);
+    const now = Timestamp.now();
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === itemId
+          ? {
+              ...i,
+              reminder,
+              updatedAt: now,
+              updatedBy: firebaseUser.uid,
+            }
+          : i
+      )
+    );
+    try {
+      await setReminder(itemId, reminder, firebaseUser.uid);
+    } catch (err) {
+      console.error('Failed to set reminder', err);
+    }
   };
 
   const handleReorderTask = async (taskId: string, newSortKey: string) => {
-    await reorderItem(taskId, newSortKey);
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === taskId
+          ? {
+              ...i,
+              sortKey: newSortKey,
+              updatedAt: Timestamp.now(),
+              updatedBy: firebaseUser.uid,
+            }
+          : i
+      )
+    );
+    try {
+      await reorderItem(taskId, newSortKey);
+    } catch (err) {
+      console.error('Failed to reorder task', err);
+    }
   };
 
   return (

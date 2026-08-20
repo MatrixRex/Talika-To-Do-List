@@ -489,6 +489,9 @@ change roles · move-out transfers ownership and removes it for everyone else.
 - Exit test suite in `src/lib/stage8.test.ts` (11 tests covering invitation, denormalization, reminder stripping, revocation, leave folder, move-out claim semantics, scale batching, and collaborative reorder consistency).
 
 ### Stage 9 — Performance and ship
+Optimistic UI mutations: all task and folder mutations (create, rename, toggle, delete, duplicate, promote, move, reorder, and reminders) update React state instantaneously (<16ms) with automatic rollback on error.
+Cache-first database layer: all database reads query the local IndexedDB cache (`getDocFromCache`/`getDocsFromCache`) in 0-1ms without waiting for remote server round-trips.
+
 Lazy-load the Firestore SDK: render from the IndexedDB cache first, dynamic-import
 the SDK after first paint. This is worth more than every other perf change
 combined. Then flip the Preact alias:
@@ -503,3 +506,4 @@ Two lines, fully reversible, source stays React. Run the full suite; if
 **Exit:** initial JS under 200 KB gzipped · cold start to interactive under 2.5s
 on the entry-level phone · full suite green with Preact aliased, or the alias
 reverted without regret.
+

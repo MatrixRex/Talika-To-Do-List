@@ -73,8 +73,9 @@ export async function signInWithGoogle(): Promise<UserCredential | null> {
   // 3. Web / PWA
   try {
     return await signInWithPopup(auth, googleProvider);
-  } catch (popupErr: any) {
-    if (popupErr?.code === 'auth/popup-blocked' || popupErr?.code === 'auth/cancelled-popup-request') {
+  } catch (popupErr: unknown) {
+    const error = popupErr as { code?: string };
+    if (error?.code === 'auth/popup-blocked' || error?.code === 'auth/cancelled-popup-request') {
       console.warn('Popup blocked, falling back to signInWithRedirect:', popupErr);
       await signInWithRedirect(auth, googleProvider);
       return null;
@@ -89,11 +90,12 @@ export async function signInWithGoogle(): Promise<UserCredential | null> {
 export async function signInAsDemoUser(email = 'demo@talika.app', password = 'password123'): Promise<UserCredential> {
   try {
     return await signInWithEmailAndPassword(auth, email, password);
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const error = err as { code?: string };
     if (
-      err.code === 'auth/user-not-found' ||
-      err.code === 'auth/invalid-credential' ||
-      err.code === 'auth/invalid-email'
+      error.code === 'auth/user-not-found' ||
+      error.code === 'auth/invalid-credential' ||
+      error.code === 'auth/invalid-email'
     ) {
       return await createUserWithEmailAndPassword(auth, email, password);
     }

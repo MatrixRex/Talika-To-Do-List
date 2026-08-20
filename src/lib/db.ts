@@ -3,6 +3,8 @@ import {
   doc,
   getDocs,
   getDoc,
+  getDocFromCache,
+  getDocsFromCache,
   query,
   where,
   orderBy,
@@ -10,7 +12,11 @@ import {
   setDoc,
   updateDoc,
   writeBatch,
-  Timestamp
+  Timestamp,
+  type DocumentReference,
+  type DocumentSnapshot,
+  type Query,
+  type QuerySnapshot
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { generateKeyBetween } from './sort-keys';
@@ -19,6 +25,38 @@ import { validateItemContext } from './schema';
 import type { Item, Folder, Reminder, User } from './schema';
 
 const BATCH_LIMIT = 500;
+
+export async function getCachedDoc(
+  ref: DocumentReference,
+  customCacheGetter?: (ref: DocumentReference) => Promise<DocumentSnapshot>,
+  customServerGetter?: (ref: DocumentReference) => Promise<DocumentSnapshot>
+): Promise<DocumentSnapshot> {
+  const cacheGetter = customCacheGetter || getDocFromCache;
+  const serverGetter = customServerGetter || getDoc;
+  try {
+    const snap = await cacheGetter(ref);
+    if (snap.exists()) return snap;
+    return await serverGetter(ref);
+  } catch {
+    return await serverGetter(ref);
+  }
+}
+
+export async function getCachedDocs(
+  q: Query,
+  customCacheGetter?: (q: Query) => Promise<QuerySnapshot>,
+  customServerGetter?: (q: Query) => Promise<QuerySnapshot>
+): Promise<QuerySnapshot> {
+  const cacheGetter = customCacheGetter || getDocsFromCache;
+  const serverGetter = customServerGetter || getDocs;
+  try {
+    const snap = await cacheGetter(q);
+    if (!snap.empty) return snap;
+    return await serverGetter(q);
+  } catch {
+    return await serverGetter(q);
+  }
+}
 
 export async function firstKeyIn(folderId: string | null, parentId: string | null): Promise<string | null> {
   const uid = auth.currentUser?.uid || '';
@@ -31,7 +69,7 @@ export async function firstKeyIn(folderId: string | null, parentId: string | nul
     orderBy('sortKey', 'asc'),
     limit(1)
   );
-  const snap = await getDocs(q);
+  const snap = await getCachedDocs(q);
   if (snap.empty) return null;
   return snap.docs[0].data().sortKey;
 }
@@ -47,39 +85,48 @@ export async function lastKeyIn(folderId: string | null, parentId: string | null
     orderBy('sortKey', 'desc'),
     limit(1)
   );
-  const snap = await getDocs(q);
+  const snap = await getCachedDocs(q);
   if (snap.empty) return null;
   return snap.docs[0].data().sortKey;
 }
 
 export async function createItem(
-  item: Omit<Item, 'createdAt' | 'updatedAt' | 'sortKey'>
+  item: Omit<Item, 'createdAt' | 'updatedAt' | 'sortKey'> & {
+    sortKey?: string;
+    createdAt?: Timestamp;
+    updatedAt?: Timestamp;
+  },
+  cachedParentItem?: Item | null,
+  cachedFolder?: Folder | null
 ): Promise<Item> {
-  let parentItem: Item | null = null;
-  if (item.parentId) {
-    const parentSnap = await getDoc(doc(db, 'items', item.parentId));
+  let parentItem: Item | null = cachedParentItem ?? null;
+  if (item.parentId && parentItem === null) {
+    const parentSnap = await getCachedDoc(doc(db, 'items', item.parentId));
     if (parentSnap.exists()) {
       parentItem = parentSnap.data() as Item;
     }
   }
 
-  let folder: Folder | null = null;
-  if (item.folderId) {
-    const folderSnap = await getDoc(doc(db, 'folders', item.folderId));
+  let folder: Folder | null = cachedFolder ?? null;
+  if (item.folderId && folder === null) {
+    const folderSnap = await getCachedDoc(doc(db, 'folders', item.folderId));
     if (folderSnap.exists()) {
       folder = folderSnap.data() as Folder;
     }
   }
 
-  const now = Timestamp.now();
-  const lastKey = await lastKeyIn(item.folderId, item.parentId);
-  const sortKey = generateKeyBetween(lastKey, null);
+  const now = item.createdAt || Timestamp.now();
+  let sortKey = item.sortKey;
+  if (!sortKey) {
+    const lastKey = await lastKeyIn(item.folderId, item.parentId);
+    sortKey = generateKeyBetween(lastKey, null);
+  }
   
   const fullItem: Item = {
     ...item,
     sortKey,
     createdAt: now,
-    updatedAt: now
+    updatedAt: item.updatedAt || now
   };
 
   validateItemContext(fullItem, parentItem, folder);
@@ -93,7 +140,7 @@ export async function updateItem(
   updates: Partial<Omit<Item, 'id' | 'createdAt' | 'updatedAt'>>
 ): Promise<void> {
   const itemRef = doc(db, 'items', itemId);
-  const itemSnap = await getDoc(itemRef);
+  const itemSnap = await getCachedDoc(itemRef);
   if (!itemSnap.exists()) throw new Error('Item not found');
   
   const existingItem = itemSnap.data() as Item;
@@ -103,7 +150,7 @@ export async function updateItem(
 
   let parentItem: Item | null = null;
   if (mergedItem.parentId) {
-    const parentSnap = await getDoc(doc(db, 'items', mergedItem.parentId));
+    const parentSnap = await getCachedDoc(doc(db, 'items', mergedItem.parentId));
     if (parentSnap.exists()) {
       parentItem = parentSnap.data() as Item;
     }
@@ -111,7 +158,7 @@ export async function updateItem(
 
   let folder: Folder | null = null;
   if (mergedItem.folderId) {
-    const folderSnap = await getDoc(doc(db, 'folders', mergedItem.folderId));
+    const folderSnap = await getCachedDoc(doc(db, 'folders', mergedItem.folderId));
     if (folderSnap.exists()) {
       folder = folderSnap.data() as Folder;
     }
@@ -135,7 +182,7 @@ export async function getSubtasks(itemId: string): Promise<Item[]> {
   const uid = auth.currentUser?.uid || '';
   const itemsRef = collection(db, 'items');
   const q = query(itemsRef, where('memberIds', 'array-contains', uid), where('parentId', '==', itemId));
-  const snap = await getDocs(q);
+  const snap = await getCachedDocs(q);
   return snap.docs.map(d => d.data() as Item);
 }
 
@@ -164,7 +211,7 @@ export async function deleteItem(itemId: string): Promise<void> {
 }
 
 export async function duplicateItem(itemId: string): Promise<string> {
-  const itemSnap = await getDoc(doc(db, 'items', itemId));
+  const itemSnap = await getCachedDoc(doc(db, 'items', itemId));
   if (!itemSnap.exists()) throw new Error('Item not found');
   
   const original = itemSnap.data() as Item;
@@ -212,7 +259,7 @@ export async function duplicateItem(itemId: string): Promise<string> {
 }
 
 export async function promoteSubtask(subtaskId: string): Promise<void> {
-  const subSnap = await getDoc(doc(db, 'items', subtaskId));
+  const subSnap = await getCachedDoc(doc(db, 'items', subtaskId));
   if (!subSnap.exists()) throw new Error('Subtask not found');
   
   const subtask = subSnap.data() as Item;
@@ -230,13 +277,13 @@ export async function promoteSubtask(subtaskId: string): Promise<void> {
 }
 
 export async function moveItem(itemId: string, targetFolderId: string | null, actorId: string): Promise<void> {
-  const itemSnap = await getDoc(doc(db, 'items', itemId));
+  const itemSnap = await getCachedDoc(doc(db, 'items', itemId));
   if (!itemSnap.exists()) throw new Error('Item not found');
   const item = itemSnap.data() as Item;
 
   let target: Folder | null = null;
   if (targetFolderId) {
-    const targetSnap = await getDoc(doc(db, 'folders', targetFolderId));
+    const targetSnap = await getCachedDoc(doc(db, 'folders', targetFolderId));
     if (targetSnap.exists()) {
       target = targetSnap.data() as Folder;
     }
@@ -310,7 +357,7 @@ async function getItemsInFolder(folderId: string): Promise<string[]> {
   const uid = auth.currentUser?.uid || '';
   const itemsRef = collection(db, 'items');
   const q = query(itemsRef, where('memberIds', 'array-contains', uid), where('folderId', '==', folderId));
-  const snap = await getDocs(q);
+  const snap = await getCachedDocs(q);
   return snap.docs.map(d => d.id);
 }
 
@@ -392,7 +439,7 @@ export async function setReminder(
   actorId: string
 ): Promise<void> {
   const itemRef = doc(db, 'items', itemId);
-  const itemSnap = await getDoc(itemRef);
+  const itemSnap = await getCachedDoc(itemRef);
   if (!itemSnap.exists()) throw new Error('Item not found');
 
   const item = itemSnap.data() as Item;
@@ -409,13 +456,13 @@ export async function setReminder(
 
   let parentItem: Item | null = null;
   if (item.parentId) {
-    const parentSnap = await getDoc(doc(db, 'items', item.parentId));
+    const parentSnap = await getCachedDoc(doc(db, 'items', item.parentId));
     if (parentSnap.exists()) parentItem = parentSnap.data() as Item;
   }
 
   let folder: Folder | null = null;
   if (item.folderId) {
-    const folderSnap = await getDoc(doc(db, 'folders', item.folderId));
+    const folderSnap = await getCachedDoc(doc(db, 'folders', item.folderId));
     if (folderSnap.exists()) folder = folderSnap.data() as Folder;
   }
 
@@ -442,7 +489,7 @@ export async function shareFolder(
   newRoles?: { [uid: string]: 'owner' | 'editor' }
 ): Promise<{ strippedCount: number }> {
   const folderRef = doc(db, 'folders', folderId);
-  const folderSnap = await getDoc(folderRef);
+  const folderSnap = await getCachedDoc(folderRef);
   if (!folderSnap.exists()) throw new Error('Folder not found');
 
   const folder = folderSnap.data() as Folder;
@@ -461,7 +508,7 @@ export async function shareFolder(
   const uid = auth.currentUser?.uid || '';
   const itemsRef = collection(db, 'items');
   const q = query(itemsRef, where('memberIds', 'array-contains', uid), where('folderId', '==', folderId));
-  const snap = await getDocs(q);
+  const snap = await getCachedDocs(q);
 
   let strippedCount = 0;
   let currentBatch = writeBatch(db);
@@ -540,7 +587,7 @@ export async function revokeFolderMember(
   actorId: string
 ): Promise<void> {
   const folderRef = doc(db, 'folders', folderId);
-  const folderSnap = await getDoc(folderRef);
+  const folderSnap = await getCachedDoc(folderRef);
   if (!folderSnap.exists()) throw new Error('Folder not found');
 
   const folder = folderSnap.data() as Folder;
@@ -552,7 +599,7 @@ export async function revokeFolderMember(
   const uid = auth.currentUser?.uid || '';
   const itemsRef = collection(db, 'items');
   const q = query(itemsRef, where('memberIds', 'array-contains', uid), where('folderId', '==', folderId));
-  const snap = await getDocs(q);
+  const snap = await getCachedDocs(q);
 
   let currentBatch = writeBatch(db);
   let opCount = 0;
@@ -592,7 +639,7 @@ export async function countFolderReminders(folderId: string): Promise<number> {
   const uid = auth.currentUser?.uid || '';
   const itemsRef = collection(db, 'items');
   const q = query(itemsRef, where('memberIds', 'array-contains', uid), where('folderId', '==', folderId));
-  const snap = await getDocs(q);
+  const snap = await getCachedDocs(q);
   let count = 0;
   for (const docSnap of snap.docs) {
     const data = docSnap.data() as Item;
