@@ -73,11 +73,9 @@ function MainApp() {
     };
   }, [firebaseUser]);
 
-  // Reschedule local notifications whenever items change
+  // Reschedule local and web notifications whenever items change
   useEffect(() => {
-    if (items.length > 0) {
-      rescheduleAllReminders(items).catch(console.error);
-    }
+    rescheduleAllReminders(items).catch(console.error);
   }, [items]);
 
   // Synchronize folder navigation with browser history for back gesture & button support

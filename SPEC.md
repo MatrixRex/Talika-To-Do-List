@@ -134,7 +134,8 @@ Invariant 5 has three consequences that must all be implemented:
 - **"Set reminder" is hidden** in the context menu for any item where
   `memberIds.length > 1`.
 
-Reminders are scheduled device-locally via Capacitor LocalNotifications. They
+Reminders are scheduled device-locally via Capacitor LocalNotifications (on native Android)
+and via the Web Notification API & Service Worker (on desktop PWA and web browsers). They
 are rescheduled on app open and on device boot. There is no server-side push.
 
 ---

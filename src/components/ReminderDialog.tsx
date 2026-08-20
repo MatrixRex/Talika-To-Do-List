@@ -115,6 +115,10 @@ export function ReminderDialog({
       recurrence = { kind: 'interval', n: Math.max(1, intervalN), unit: intervalUnit };
     }
 
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+
     onSave({
       fireAt: Timestamp.fromDate(targetDate),
       recurrence,
