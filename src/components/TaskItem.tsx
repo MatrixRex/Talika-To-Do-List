@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import type { Item, Folder, Reminder } from '../lib/schema';
-import { ListRow, Button, Input, Dialog, Menu, MenuItem, IconButton } from '../ui';
+import { ListRow, Button, Input, Dialog, Menu, MenuItem, IconButton, AnimateEnter } from '../ui';
 import { Icon } from '../ui/icons';
 import { SubtaskItem } from './SubtaskItem';
 import { ReminderDialog } from './ReminderDialog';
@@ -10,6 +11,7 @@ import { CSS } from '@dnd-kit/utilities';
 
 interface TaskItemProps {
   item: Item;
+  index?: number;
   subtasks: Item[];
   folders: Folder[];
   isSelected?: boolean;
@@ -27,6 +29,7 @@ interface TaskItemProps {
 
 export function TaskItem({
   item,
+  index = 0,
   subtasks,
   folders,
   isSelected = false,
@@ -53,6 +56,10 @@ export function TaskItem({
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [pendingMoveTarget, setPendingMoveTarget] = useState<{ id: string | null; name: string } | null>(null);
   const [isMoveOutConfirmOpen, setIsMoveOutConfirmOpen] = useState(false);
+
+  const { userProfile } = useAuth();
+  const hideCompletedTasks = userProfile?.prefs?.hideCompletedTasks ?? true;
+  const [exitState, setExitState] = useState<'idle' | 'completing' | 'deleting'>('idle');
 
   const {
     attributes,
@@ -110,6 +117,23 @@ export function TaskItem({
     }
   };
 
+  const isCompleted = exitState === 'completing' || item.done;
+
+  const handleCompleteIntercept = (done: boolean) => {
+    if (done && hideCompletedTasks) {
+      setExitState('completing');
+      setTimeout(() => onComplete(item.id, done), 800);
+    } else {
+      onComplete(item.id, done);
+    }
+  };
+
+  const handleDeleteIntercept = () => {
+    setMenuOpen(false);
+    setExitState('deleting');
+    setTimeout(() => onDelete(item.id), 800);
+  };
+
   const confirmMoveOut = () => {
     setIsMoveOutConfirmOpen(false);
     onMoveToFolder(item.id, null);
@@ -123,75 +147,89 @@ export function TaskItem({
   };
 
   return (
-    <div ref={setNodeRef} style={sortableStyle} className="flex flex-col">
-      <ListRow
-        className={`cursor-pointer transition-colors duration-fast ${item.done ? 'opacity-60' : ''} ${isSelected ? 'bg-surface-active ring-1 ring-accent' : ''}`}
-        onClick={() => {
-          if (onSelect) {
-            onSelect(item.id);
-          }
-        }}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          setMenuOpen(true);
-        }}
-      >
-        <div className="flex items-center gap-0 -space-x-1 shrink-0 -ml-2">
-          {/* Drag Handle */}
-          {isSortable && (
-            <div
-              {...attributes}
-              {...listeners}
-              className="p-1 text-text-muted hover:text-text cursor-grab active:cursor-grabbing touch-none shrink-0"
-              onClick={(e) => e.stopPropagation()}
-              aria-label="Drag to reorder"
-            >
-              <Icon name="gripVertical" />
-            </div>
-          )}
-
-          {/* Chevron for subtask expand/collapse */}
-          {subtasks.length > 0 ? (
-            <IconButton
-              className="!p-1 min-w-0 min-h-0"
-              aria-label={isExpanded ? "Collapse subtasks" : "Expand subtasks"}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsExpanded(!isExpanded);
-              }}
-            >
-              <Icon name={isExpanded ? 'chevronDown' : 'chevronRight'} />
-            </IconButton>
-          ) : (
-            <div className="w-6 shrink-0" />
-          )}
-
-          {/* Completion Checkbox */}
-          <IconButton
-            className="!p-1 min-w-0 min-h-0"
-            aria-label={item.done ? "Mark incomplete" : "Mark complete"}
-            onClick={(e) => {
-              e.stopPropagation();
-              onComplete(item.id, !item.done);
-            }}
-          >
-            <Icon name={item.done ? 'check' : 'circle'} className={item.done ? 'text-accent' : 'text-text-muted'} />
-          </IconButton>
-        </div>
-
-        {/* Task Title & Badges */}
-        <div
-          className="flex-1 min-w-0 flex items-center gap-2 flex-wrap"
-          onClick={(e) => {
+    <AnimateEnter staggerIndex={index}>
+      <div ref={setNodeRef} style={sortableStyle} className={`flex flex-col ${exitState === 'completing' ? 'anim-complete-out' : exitState === 'deleting' ? 'anim-delete-out' : ''}`}>
+        <ListRow
+          className={`cursor-pointer transition-colors duration-fast ${isCompleted ? 'opacity-80' : ''} ${isSelected ? 'bg-surface-active ring-1 ring-accent' : ''} ${
+            exitState === 'completing' ? '!bg-green-500/15 !border-green-500/30' : exitState === 'deleting' ? '!bg-red-500/15 !border-red-500/30' : ''
+          }`}
+          onClick={() => {
             if (onSelect) {
-              e.stopPropagation();
               onSelect(item.id);
             }
           }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setMenuOpen(true);
+          }}
         >
-          <span className={`truncate ${item.done ? 'line-through text-text-muted' : 'text-text'}`}>
-            {item.title}
-          </span>
+          <div className="flex items-center gap-0 -space-x-1 shrink-0 -ml-2">
+            {/* Drag Handle */}
+            {isSortable && (
+              <div
+                {...attributes}
+                {...listeners}
+                className="p-1 text-text-muted hover:text-text cursor-grab active:cursor-grabbing touch-none shrink-0"
+                onClick={(e) => e.stopPropagation()}
+                aria-label="Drag to reorder"
+              >
+                <Icon name="gripVertical" />
+              </div>
+            )}
+
+            {/* Chevron for subtask expand/collapse */}
+            {subtasks.length > 0 ? (
+              <IconButton
+                className="!p-1 min-w-0 min-h-0"
+                aria-label={isExpanded ? "Collapse subtasks" : "Expand subtasks"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsExpanded(!isExpanded);
+                }}
+              >
+                <Icon name={isExpanded ? 'chevronDown' : 'chevronRight'} />
+              </IconButton>
+            ) : (
+              <div className="w-6 shrink-0" />
+            )}
+
+            {/* Completion Checkbox */}
+            <IconButton
+              className="!p-1 min-w-0 min-h-0"
+              aria-label={item.done ? "Mark incomplete" : "Mark complete"}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCompleteIntercept(!item.done);
+              }}
+            >
+              <Icon
+                name={isCompleted ? 'check' : 'circle'}
+                className={`${isCompleted ? 'text-accent anim-pop' : 'text-text-muted'} transition-transform`}
+              />
+            </IconButton>
+          </div>
+
+          {/* Task Title & Badges */}
+          <div
+            className="flex-1 min-w-0 flex items-center gap-2 flex-wrap"
+            onClick={(e) => {
+              if (onSelect) {
+                e.stopPropagation();
+                onSelect(item.id);
+              }
+            }}
+          >
+            <div className="relative inline-flex items-center min-w-0 max-w-full">
+              <span className={`truncate transition-colors duration-300 ${isCompleted ? 'text-text-muted opacity-60' : 'text-text'}`}>
+                {item.title}
+              </span>
+              <span
+                aria-hidden="true"
+                className={`absolute left-0 top-1/2 -translate-y-1/2 h-[1.5px] bg-text-muted pointer-events-none transition-all duration-300 ease-out origin-left ${
+                  isCompleted ? 'w-full scale-x-100 opacity-90' : 'w-full scale-x-0 opacity-0'
+                }`}
+              />
+            </div>
 
           {/* Subtask count */}
           {subtasks.length > 0 && !isExpanded && (
@@ -272,10 +310,7 @@ export function TaskItem({
               <MenuItem
                 variant="danger"
                 icon={<Icon name="trash" />}
-                onClick={() => {
-                  setMenuOpen(false);
-                  onDelete(item.id);
-                }}
+                onClick={handleDeleteIntercept}
               >
                 Delete
               </MenuItem>
@@ -406,6 +441,7 @@ export function TaskItem({
           </div>
         </div>
       </Dialog>
-    </div>
+      </div>
+    </AnimateEnter>
   );
 }

@@ -10,6 +10,8 @@ export const UserPrefsSchema = z.object({
   hideCompletedTasks: z.boolean(),
   hideCompletedSubtasks: z.boolean(),
   rememberLastFolder: z.boolean(),
+  reduceAnimations: z.boolean().optional(),
+  fastMode: z.boolean().optional(),
 });
 
 export const UserSchema = z.object({

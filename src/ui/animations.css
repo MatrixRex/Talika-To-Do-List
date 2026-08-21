@@ -1,0 +1,201 @@
+:root {
+  --anim-scale-press: 0.96;
+  --anim-enter-slide: 12px;
+}
+
+[data-reduce-animations="true"] {
+  --anim-scale-press: 1;
+  --anim-enter-slide: 0px;
+}
+
+[data-fast-mode="true"] {
+  --dur-fast: 60ms;
+  --dur-base: 100ms;
+  --dur-slow: 150ms;
+}
+
+@keyframes enterModern {
+  0% {
+    opacity: 0;
+    transform: translateY(var(--anim-enter-slide));
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes enterSimple {
+  0% {
+    opacity: 0;
+    transform: translateY(var(--anim-enter-slide));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.anim-enter {
+  opacity: 0;
+  animation: enterModern var(--dur-slow) cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+[data-fast-mode="true"] .anim-enter {
+  animation-name: enterSimple;
+}
+
+[data-reduce-animations="true"] .anim-enter {
+  /* Reduce animations implies no blur, no slide, just opacity */
+  animation-name: enterSimple;
+}
+
+/* Base class for interactive elements that should scale down on press */
+.anim-press {
+  transition-property: transform, opacity, background-color, border-color, color;
+  transition-timing-function: var(--ease);
+  transition-duration: var(--dur-fast);
+}
+.anim-press:active {
+  transform: scale(var(--anim-scale-press));
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes scaleOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.95); }
+}
+
+@keyframes shrinkOut {
+  0% { opacity: 1; transform: scale(1); max-height: 140px; }
+  40% { opacity: 0; transform: scale(0.96) translateY(-2px); max-height: 140px; }
+  100% { opacity: 0; transform: scale(0.92) translateY(-6px); max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; border: 0; overflow: hidden; }
+}
+
+@keyframes completeSequence {
+  0% {
+    background-color: rgba(34, 197, 94, 0);
+    opacity: 1;
+    max-height: 140px;
+    transform: scale(1);
+  }
+  12% {
+    background-color: rgba(34, 197, 94, 0.16);
+  }
+  45% {
+    background-color: rgba(34, 197, 94, 0.16);
+    opacity: 1;
+    max-height: 140px;
+    transform: scale(1);
+  }
+  80% {
+    background-color: rgba(34, 197, 94, 0.04);
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  100% {
+    background-color: transparent;
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    border-width: 0;
+    transform: scale(0.92) translateY(-8px);
+    overflow: hidden;
+  }
+}
+
+@keyframes deleteSequence {
+  0% {
+    background-color: rgba(239, 68, 68, 0);
+    opacity: 1;
+    max-height: 140px;
+    transform: scale(1);
+  }
+  12% {
+    background-color: rgba(239, 68, 68, 0.16);
+  }
+  45% {
+    background-color: rgba(239, 68, 68, 0.16);
+    opacity: 1;
+    max-height: 140px;
+    transform: scale(1);
+  }
+  80% {
+    background-color: rgba(239, 68, 68, 0.04);
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  100% {
+    background-color: transparent;
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    border-width: 0;
+    transform: scale(0.92) translateY(-8px);
+    overflow: hidden;
+  }
+}
+
+@keyframes pop {
+  0% { transform: scale(0.8); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.anim-pop {
+  animation: pop 260ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.anim-fade-in { animation: fadeIn var(--dur-base) ease-out forwards; }
+.anim-fade-out { animation: fadeOut var(--dur-base) ease-in forwards; }
+.anim-scale-in { animation: scaleIn var(--dur-base) cubic-bezier(0.2, 0, 0, 1) forwards; }
+.anim-scale-out { animation: scaleOut var(--dur-fast) ease-in forwards; }
+.anim-shrink-out { animation: shrinkOut var(--dur-slow) ease-in-out forwards; overflow: hidden; }
+
+.anim-complete-out {
+  animation: completeSequence 750ms cubic-bezier(0.2, 0, 0, 1) forwards;
+  overflow: hidden;
+  will-change: transform, opacity, max-height;
+}
+
+.anim-delete-out {
+  animation: deleteSequence 750ms cubic-bezier(0.2, 0, 0, 1) forwards;
+  overflow: hidden;
+  will-change: transform, opacity, max-height;
+}
+
+[data-reduce-animations="true"] .anim-scale-in,
+[data-reduce-animations="true"] .anim-scale-out,
+[data-reduce-animations="true"] .anim-shrink-out,
+[data-reduce-animations="true"] .anim-complete-out,
+[data-reduce-animations="true"] .anim-delete-out {
+  animation-name: fadeOut; /* Use fade instead of scale/shrink */
+}
+[data-reduce-animations="true"] .anim-scale-in {
+  animation-name: fadeIn;
+}
+[data-reduce-animations="true"] .anim-pop {
+  animation: none;
+}

@@ -9,3 +9,5 @@ export * from './Dialog';
 export * from './menu-position';
 export * from './icons';
 export * from './colors';
+export * from './Animation';
+export * from './useDelayedUnmount';

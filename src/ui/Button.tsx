@@ -15,7 +15,7 @@ export function Button({ children, className, variant = 'primary', ...props }: B
 
   return (
     <button
-      className={`px-4 py-2 min-h-touch min-w-touch rounded-md transition-colors duration-base active:scale-95 flex items-center justify-center font-medium ${variantStyles} ${className || ''}`}
+      className={`px-4 py-2 min-h-touch min-w-touch rounded-md anim-press flex items-center justify-center font-medium ${variantStyles} ${className || ''}`}
       {...props}
     >
       {children}

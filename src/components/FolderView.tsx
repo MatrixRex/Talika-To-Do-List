@@ -289,9 +289,10 @@ export function FolderView({
                 strategy={verticalListSortingStrategy}
               >
                 <div className="flex flex-col gap-1">
-                  {rootTasks.map((task) => (
+                  {rootTasks.map((task, index) => (
                     <TaskItem
                       key={task.id}
+                      index={index}
                       item={task}
                       subtasks={getSubtasks(task.id)}
                       folders={folders}

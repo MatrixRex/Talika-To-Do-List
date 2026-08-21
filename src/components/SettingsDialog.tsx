@@ -59,6 +59,32 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
               <Icon name={userProfile.prefs.hideCompletedTasks ? 'check' : 'circle'} />
             </div>
           </ListRow>
+
+          <ListRow 
+            className="cursor-pointer hover:bg-surface rounded-md" 
+            onClick={() => updatePrefs({ reduceAnimations: !userProfile.prefs.reduceAnimations })}
+          >
+            <div className="flex-1">
+              <p className="text-sm font-medium text-text">Reduce animations</p>
+              <p className="text-xs text-text-muted">Disable spatial movement for accessibility</p>
+            </div>
+            <div className="shrink-0 text-accent">
+              <Icon name={userProfile.prefs.reduceAnimations ? 'check' : 'circle'} />
+            </div>
+          </ListRow>
+
+          <ListRow 
+            className="cursor-pointer hover:bg-surface rounded-md" 
+            onClick={() => updatePrefs({ fastMode: !userProfile.prefs.fastMode })}
+          >
+            <div className="flex-1">
+              <p className="text-sm font-medium text-text">Fast mode</p>
+              <p className="text-xs text-text-muted">Optimize performance by removing heavy effects</p>
+            </div>
+            <div className="shrink-0 text-accent">
+              <Icon name={userProfile.prefs.fastMode ? 'check' : 'circle'} />
+            </div>
+          </ListRow>
         </div>
 
         {/* Footer Section */}

@@ -194,9 +194,10 @@ export function HomeView({
                     strategy={verticalListSortingStrategy}
                   >
                     <div className="flex flex-col gap-1">
-                      {defaultRootTasks.map((task) => (
+                      {defaultRootTasks.map((task, index) => (
                         <TaskItem
                           key={task.id}
+                          index={index}
                           item={task}
                           subtasks={getSubtasks(task.id)}
                           folders={folders}

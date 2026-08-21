@@ -479,7 +479,11 @@ function MainApp() {
   };
 
   return (
-    <main className="h-dvh w-screen flex flex-col overflow-hidden bg-background text-text">
+    <main
+      className="h-dvh w-screen flex flex-col overflow-hidden bg-background text-text"
+      data-fast-mode={userProfile?.prefs?.fastMode ? 'true' : 'false'}
+      data-reduce-animations={userProfile?.prefs?.reduceAnimations ? 'true' : 'false'}
+    >
       <AuthBar />
       <div className="flex-1 overflow-hidden">
         {activeFolder ? (

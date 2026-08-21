@@ -12,7 +12,8 @@ import {
   IconButton,
   Icon,
   type IconName,
-  getFolderColorStyle
+  getFolderColorStyle,
+  AnimateEnter
 } from '../ui';
 import { FolderCustomizeDialog } from './FolderCustomizeDialog';
 import { ShareFolderDialog } from './ShareFolderDialog';
@@ -128,9 +129,10 @@ export function FolderGrid({
           strategy={rectSortingStrategy}
         >
           <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 overflow-y-auto max-h-64">
-            {sortedFolders.map((folder) => (
+            {sortedFolders.map((folder, index) => (
               <SortableFolderCard
                 key={folder.id}
+                index={index}
                 folder={folder}
                 itemCount={getFolderItemCount(folder.id)}
                 isActive={activeFolderId === folder.id}
@@ -202,7 +204,8 @@ function SortableFolderCard({
   onRename,
   onDelete,
   onCustomize,
-  onShare
+  onShare,
+  index = 0
 }: {
   folder: Folder;
   itemCount: number;
@@ -212,6 +215,7 @@ function SortableFolderCard({
   onDelete: () => void;
   onCustomize: () => void;
   onShare: () => void;
+  index?: number;
 }) {
   const {
     attributes,
@@ -225,6 +229,13 @@ function SortableFolderCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState(folder.name);
+  const [isExiting, setIsExiting] = useState(false);
+
+  const handleDeleteIntercept = () => {
+    setMenuOpen(false);
+    setIsExiting(true);
+    setTimeout(() => onDelete(), 300);
+  };
 
   const colorStyle = getFolderColorStyle(folder.color);
   const iconName = (folder.icon as IconName) || 'folder';
@@ -245,7 +256,8 @@ function SortableFolderCard({
   };
 
   return (
-    <div ref={setNodeRef} style={sortableStyle} {...attributes} {...listeners}>
+    <AnimateEnter staggerIndex={index}>
+    <div ref={setNodeRef} style={sortableStyle} className={isExiting ? 'anim-scale-out' : ''} {...attributes} {...listeners}>
       <Card
         className={`cursor-pointer flex flex-col justify-between min-h-card transition-colors duration-fast hover:opacity-90 relative border ${
           isActive ? 'ring-2 ring-accent' : ''
@@ -302,10 +314,7 @@ function SortableFolderCard({
                 <MenuItem
                   variant="danger"
                   icon={<Icon name="trash" />}
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onDelete();
-                  }}
+                  onClick={handleDeleteIntercept}
                 >
                   Delete
                 </MenuItem>
@@ -340,5 +349,6 @@ function SortableFolderCard({
         </div>
       </Dialog>
     </div>
+    </AnimateEnter>
   );
 }

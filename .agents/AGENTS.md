@@ -21,7 +21,7 @@ model, invariants, and stage plan.
   `src/ui/`.
 - Never import an icon at a call site. Add it to `src/ui/icons.tsx` and use
   `<Icon name="…" />`.
-- Never animate anything but `transform` and `opacity`.
+- **Animations:** New components must reuse the animation engine/manager's animations instead of inline animations. Modern fluid animation techniques like blur+fade are allowed and encouraged.
 - Never introduce a Cloud Function or Cloud Storage bucket. Neither exists on the
   Spark plan; both would require a billing account.
 - Never use integer positions for ordering. `sortKey` is a fractional index.

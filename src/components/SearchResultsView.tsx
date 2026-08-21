@@ -116,7 +116,7 @@ export function SearchResultsView({
           <span className="text-xs font-bold uppercase tracking-wider text-text-muted px-2 py-1">
             Tasks ({matchingTasks.length})
           </span>
-          {matchingTasks.map((task) => (
+          {matchingTasks.map((task, index) => (
             <div key={task.id} className="flex flex-col">
               {context.folderId === null && (
                 <div className="px-2 pt-1">
@@ -127,6 +127,7 @@ export function SearchResultsView({
               )}
               <TaskItem
                 item={task}
+                index={index}
                 subtasks={getSubtasksOf(task.id)}
                 folders={folders}
                 isSelected={selectedTaskId === task.id}
@@ -151,7 +152,7 @@ export function SearchResultsView({
           <span className="text-xs font-bold uppercase tracking-wider text-text-muted px-2 py-1">
             Subtasks ({matchingSubtasks.length})
           </span>
-          {matchingSubtasks.map((subtask) => {
+          {matchingSubtasks.map((subtask, index) => {
             const parent = getParentTask(subtask.parentId);
             return (
               <div key={subtask.id} className="flex flex-col">
@@ -165,6 +166,7 @@ export function SearchResultsView({
                 </div>
                 <SubtaskItem
                   subtask={subtask}
+                  index={index}
                   onComplete={onCompleteTask}
                   onRename={onRenameTask}
                   onDelete={onDeleteTask}

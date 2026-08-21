@@ -2,9 +2,9 @@ import { useRef, useState, useLayoutEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { calculateMenuPosition, type MenuPosition } from './menu-position';
+import { useDelayedUnmount } from './useDelayedUnmount';
 
 export type { MenuPosition };
-
 
 export interface MenuProps {
   children: ReactNode;
@@ -18,6 +18,9 @@ export function Menu({ children, isOpen, onClose, className }: MenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<MenuPosition>({ top: 0, right: 0 });
   const [isPositioned, setIsPositioned] = useState(false);
+
+  // 150ms delay for unmount
+  const { shouldRender, isExiting } = useDelayedUnmount(isOpen, 150);
 
   const updatePosition = useCallback(() => {
     if (!anchorRef.current) return;
@@ -68,18 +71,18 @@ export function Menu({ children, isOpen, onClose, className }: MenuProps) {
         window.removeEventListener('scroll', handleScrollOrResize, true);
       };
     } else {
-      setIsPositioned(false);
+      // Don't reset isPositioned on close so it doesn't jump during exit animation
     }
   }, [isOpen, updatePosition]);
 
   return (
     <>
       <div ref={anchorRef} className="absolute right-0 top-full" aria-hidden="true" />
-      {isOpen &&
+      {shouldRender &&
         createPortal(
           <>
             <div
-              className="fixed inset-0 z-40"
+              className={`fixed inset-0 z-40 ${isExiting ? 'anim-fade-out' : 'anim-fade-in'}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onClose();
@@ -87,12 +90,13 @@ export function Menu({ children, isOpen, onClose, className }: MenuProps) {
             />
             <div
               ref={menuRef}
-              className={`fixed z-50 bg-surface-elevated text-text rounded-md shadow-lg border border-surface-border p-1 min-w-menu overflow-y-auto ${className || ''}`}
+              className={`fixed z-50 bg-surface-elevated text-text rounded-md shadow-lg border border-surface-border p-1 min-w-menu overflow-y-auto ${className || ''} ${isExiting ? 'anim-scale-out' : 'anim-scale-in'}`}
               style={{
                 top: position.top,
                 right: position.right,
                 maxHeight: 'calc(100dvh - 16px)',
                 opacity: isPositioned ? 1 : 0,
+                transformOrigin: 'top right',
               }}
               onClick={(e) => e.stopPropagation()}
             >
