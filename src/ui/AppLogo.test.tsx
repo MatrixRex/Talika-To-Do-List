@@ -8,7 +8,7 @@ describe('AppLogo & Logo Icon', () => {
     const svg = container.querySelector('svg');
     expect(svg).toBeDefined();
     expect(svg?.classList.contains('test-logo')).toBe(true);
-    expect(svg?.getAttribute('viewBox')).toBe('0 0 24 24');
+    expect(svg?.getAttribute('viewBox')).toBe('0 0 512 512');
   });
 
   it('renders the AppLogo component in different sizes', () => {

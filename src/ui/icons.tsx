@@ -74,20 +74,20 @@ function TalikaLogoIcon({ size = 20, className, ...props }: SVGProps<SVGSVGEleme
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
+      viewBox="0 0 512 512"
       width={size}
       height={size}
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.8}
+      strokeWidth={36}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
       {...props}
     >
-      <path d="M4 6.5h16" />
-      <path d="M7.8 8.8c.4-.6-.4-1.2-1.1-.7-1 .7-1.2 3.8.2 6 1 .9 2.4.4 2.5-1.5.1-1.8.7-.3 1.3 1.3.3.8.7 1.7.9 1.7" />
-      <path d="M17 6.5v10.5" />
+      <path d="M107.062 155.56C162.518 81.151 335.385 179.013 404.94 144.077" />
+      <path d="M229.879 252.972C322.005 120.128 383.279 385.15 222.538 385.15C110.942 385.15 72.7733 233.823 165.613 184.309" />
+      <path d="M381.758 155.559V367.559" />
     </svg>
   );
 }
