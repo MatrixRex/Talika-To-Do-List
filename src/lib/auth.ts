@@ -145,7 +145,7 @@ export async function syncUserProfile(firebaseUser: FirebaseUser): Promise<User>
     createdAt: Timestamp.now(),
     schemaVersion: 1,
     prefs: {
-      hideCompletedTasks: false,
+      hideCompletedTasks: true,
       hideCompletedSubtasks: false,
       rememberLastFolder: false,
     },

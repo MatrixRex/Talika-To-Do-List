@@ -1,16 +1,14 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Menu, MenuItem } from '../ui/Menu';
-import { Icon } from '../ui/icons';
+import { SettingsDialog } from './SettingsDialog';
 
 export function AuthBar() {
-  const { userProfile, firebaseUser, signOut } = useAuth();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const { userProfile, firebaseUser } = useAuth();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (!firebaseUser) return null;
 
   const displayName = userProfile?.displayName || firebaseUser.displayName || 'User';
-  const email = userProfile?.email || firebaseUser.email || '';
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
@@ -22,9 +20,9 @@ export function AuthBar() {
       <div className="relative">
         <button
           type="button"
-          onClick={() => setMenuOpen(!menuOpen)}
+          onClick={() => setSettingsOpen(true)}
           className="flex items-center gap-2 p-1 rounded-full hover:bg-surface transition-colors duration-fast"
-          aria-label="Account settings"
+          aria-label="Settings"
         >
           {firebaseUser.photoURL ? (
             <img
@@ -42,25 +40,7 @@ export function AuthBar() {
           </span>
         </button>
 
-        <Menu isOpen={menuOpen} onClose={() => setMenuOpen(false)} className="w-56 right-0">
-          <div className="px-4 py-2 border-b border-surface-border">
-            <p className="text-sm font-semibold truncate">{displayName}</p>
-            {email && <p className="text-xs text-text-muted truncate">{email}</p>}
-          </div>
-          <MenuItem
-            icon={<Icon name="logOut" />}
-            variant="danger"
-            onClick={() => {
-              setMenuOpen(false);
-              signOut();
-            }}
-          >
-            Sign out
-          </MenuItem>
-          <div className="px-4 pt-3 pb-1 border-t border-surface-border mt-1">
-            <p className="text-[10px] text-text-muted text-center font-mono">v{__APP_VERSION__}</p>
-          </div>
-        </Menu>
+        <SettingsDialog isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
       </div>
     </header>
   );

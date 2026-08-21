@@ -18,6 +18,7 @@ import {
 import { generateKeyBetween, compareSortKeys } from './lib/sort-keys';
 import { generateUUID } from './lib/uuid';
 import type { Item, Folder, Reminder } from './lib/schema';
+import { useFilteredItems } from './lib/useFilteredItems';
 import { rescheduleAllReminders } from './lib/notifications';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthBar } from './components/AuthBar';
@@ -27,10 +28,13 @@ import { FolderView } from './components/FolderView';
 import './App.css';
 
 function MainApp() {
-  const { firebaseUser, loading } = useAuth();
-  const [items, setItems] = useState<Item[]>([]);
+  const { firebaseUser, userProfile, loading } = useAuth();
+  const [rawItems, setItems] = useState<Item[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+
+  const hideCompleted = userProfile?.prefs?.hideCompletedTasks ?? true;
+  const items = useFilteredItems(rawItems, hideCompleted);
 
   useEffect(() => {
     if (!firebaseUser) {
@@ -241,13 +245,13 @@ function MainApp() {
   // Task actions
   const handleCreateTask = async (title: string, parentId?: string) => {
     const targetFolderId = parentId
-      ? items.find((i) => i.id === parentId)?.folderId ?? activeFolderId
+      ? rawItems.find((i) => i.id === parentId)?.folderId ?? activeFolderId
       : activeFolderId;
     const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) || null : null;
     const memberIds = targetFolder ? targetFolder.memberIds : [firebaseUser.uid];
 
-    const parentItem = parentId ? items.find((i) => i.id === parentId) || null : null;
-    const siblingItems = items
+    const parentItem = parentId ? rawItems.find((i) => i.id === parentId) || null : null;
+    const siblingItems = rawItems
       .filter((i) => i.folderId === targetFolderId && i.parentId === (parentId || null))
       .sort(compareSortKeys);
     const lastKey = siblingItems.length > 0 ? siblingItems[siblingItems.length - 1].sortKey : null;
@@ -353,10 +357,10 @@ function MainApp() {
   };
 
   const handlePromoteSubtask = async (id: string) => {
-    const subtask = items.find((i) => i.id === id);
+    const subtask = rawItems.find((i) => i.id === id);
     if (!subtask || !subtask.parentId) return;
 
-    const rootItems = items
+    const rootItems = rawItems
       .filter((i) => i.folderId === subtask.folderId && i.parentId === null)
       .sort(compareSortKeys);
     const lastKey = rootItems.length > 0 ? rootItems[rootItems.length - 1].sortKey : null;
@@ -386,11 +390,11 @@ function MainApp() {
 
   const handleMoveToFolder = async (itemId: string, targetFolderId: string | null) => {
     const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) || null : null;
-    const newOwnerId = targetFolder ? (items.find((i) => i.id === itemId)?.ownerId || firebaseUser.uid) : firebaseUser.uid;
+    const newOwnerId = targetFolder ? (rawItems.find((i) => i.id === itemId)?.ownerId || firebaseUser.uid) : firebaseUser.uid;
     const newMemberIds = targetFolder ? targetFolder.memberIds : [firebaseUser.uid];
     const isTargetShared = newMemberIds.length > 1;
 
-    const targetItems = items
+    const targetItems = rawItems
       .filter((i) => i.folderId === targetFolderId && i.parentId === null)
       .sort(compareSortKeys);
     const firstKey = targetItems.length > 0 ? targetItems[0].sortKey : null;
