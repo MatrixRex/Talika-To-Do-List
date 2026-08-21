@@ -7,10 +7,10 @@ export interface AppLogoProps {
 
 export function AppLogo({ size = 'md', className = '' }: AppLogoProps) {
   const sizeClasses = {
-    sm: 'w-6 h-6 rounded-sm',
-    md: 'w-8 h-8 rounded-md',
-    lg: 'w-12 h-12 rounded-lg',
-    xl: 'w-16 h-16 rounded-lg',
+    sm: 'w-6 h-6',
+    md: 'w-8 h-8',
+    lg: 'w-12 h-12',
+    xl: 'w-16 h-16',
   };
 
   const iconSizes = {
@@ -22,7 +22,7 @@ export function AppLogo({ size = 'md', className = '' }: AppLogoProps) {
 
   return (
     <div
-      className={`inline-flex items-center justify-center bg-accent text-surface shrink-0 shadow-sm overflow-hidden ${sizeClasses[size]} ${className}`}
+      className={`inline-flex items-center justify-center rounded-full bg-accent text-surface shrink-0 shadow-sm overflow-hidden ${sizeClasses[size]} ${className}`}
       aria-label="Talika Logo"
     >
       <Icon name="logo" className={iconSizes[size]} />

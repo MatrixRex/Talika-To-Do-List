@@ -7,10 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
-- Designed a custom minimalist SVG app icon featuring a squircle badge, top task header, and dynamic checkmark monogram.
+- Designed a custom minimalist SVG app icon featuring the Bengali letter **তা** (first syllable of তালিকা - Talika) sculpted to fit seamlessly inside a circle.
 - Replaced default favicon with high-res scalable `favicon.svg` and `icon.svg` with PWA and Chrome MV3 extension support.
-- Added `<AppLogo />` UI component and `logo` icon to `src/ui/icons.tsx`.
-- Integrated Talika app logo across the navigation header (`AuthBar`), login hero card (`LoginView`), and settings dialog footer (`SettingsDialog`).
+- Added `<AppLogo />` circular UI component and `logo` icon to `src/ui/icons.tsx`.
+- Integrated Talika circular app logo across the navigation header (`AuthBar`), login hero card (`LoginView`), and settings dialog footer (`SettingsDialog`).
 
 ## [0.1.0] - 2026-08-21
 ### Added

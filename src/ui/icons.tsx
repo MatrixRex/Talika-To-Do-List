@@ -79,14 +79,15 @@ function TalikaLogoIcon({ size = 20, className, ...props }: SVGProps<SVGSVGEleme
       height={size}
       fill="none"
       stroke="currentColor"
-      strokeWidth={2.2}
+      strokeWidth={1.8}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
       {...props}
     >
-      <path d="M4 5.5h16" />
-      <path d="M5.5 13.5l4 4 9-9" />
+      <path d="M4 6.5h16" />
+      <path d="M7.8 9.5c.3-.8-.5-1.5-1.2-1C5.6 9.4 5.3 13.5 7.4 16c1.8 2.2 3.8 1.6 4.5-.4.5-1.6.5-5.8.5-5.8v7.7" />
+      <path d="M17 6.5v11" />
     </svg>
   );
 }

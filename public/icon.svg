@@ -1,20 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" fill="none">
   <defs>
-    <linearGradient id="talika-bg" x1="64" y1="32" x2="448" y2="480" gradientUnits="userSpaceOnUse">
+    <linearGradient id="talika-bg" x1="48" y1="32" x2="464" y2="480" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#3B82F6"/>
       <stop offset="55%" stop-color="#2563EB"/>
       <stop offset="100%" stop-color="#1D4ED8"/>
     </linearGradient>
-    <linearGradient id="talika-border" x1="128" y1="48" x2="384" y2="464" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.35"/>
-      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.08"/>
+    <linearGradient id="talika-glow" x1="128" y1="48" x2="384" y2="464" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.05"/>
     </linearGradient>
   </defs>
-  <!-- Squircle Base -->
-  <rect width="512" height="512" rx="116" fill="url(#talika-bg)"/>
-  <rect x="2" y="2" width="508" height="508" rx="114" stroke="url(#talika-border)" stroke-width="4"/>
   
-  <!-- Minimalist Talika Monogram: Top task line & Dynamic triumphant checkmark -->
-  <rect x="144" y="140" width="224" height="38" rx="19" fill="#FFFFFF" fill-opacity="0.95"/>
-  <path d="M152 276 L224 348 L360 212" stroke="#FFFFFF" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Circular Container -->
+  <circle cx="256" cy="256" r="236" fill="url(#talika-bg)"/>
+  <circle cx="256" cy="256" r="232" stroke="url(#talika-glow)" stroke-width="4"/>
+
+  <!-- Bangla 'তা' (Ta) - First syllable of Talika (তালিকা) -->
+  <!-- Top Matra (মাত্রা) -->
+  <path d="M 120 144 H 392" stroke="#FFFFFF" stroke-width="36" stroke-linecap="round"/>
+
+  <!-- 'ত' Letter Body -->
+  <path d="M 188 202 C 194 184, 174 168, 156 182 C 134 200, 130 286, 174 340 C 212 386, 256 348, 270 280 C 276 244, 276 196, 276 196 L 276 356" stroke="#FFFFFF" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- 'া' (Aakar) Vertical Stem -->
+  <path d="M 356 144 V 356" stroke="#FFFFFF" stroke-width="36" stroke-linecap="round"/>
 </svg>

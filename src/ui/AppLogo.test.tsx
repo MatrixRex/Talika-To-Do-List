@@ -14,6 +14,7 @@ describe('AppLogo & Logo Icon', () => {
   it('renders the AppLogo component in different sizes', () => {
     const { rerender, container } = render(<AppLogo size="sm" />);
     const el = container.firstChild as HTMLElement;
+    expect(el.classList.contains('rounded-full')).toBe(true);
     expect(el.classList.contains('w-6')).toBe(true);
     expect(el.classList.contains('h-6')).toBe(true);
 
