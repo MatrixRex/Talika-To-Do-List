@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
+import { Card, Button, AppLogo } from '../ui';
 import { Icon } from '../ui/icons';
 
 export function LoginView() {
@@ -38,9 +37,7 @@ export function LoginView() {
   return (
     <div className="flex flex-col items-center justify-center min-h-dvh p-4 bg-background text-text">
       <Card className="w-full max-w-sm flex flex-col items-center text-center p-8 gap-6 border border-surface-border shadow-md">
-        <div className="w-16 h-16 rounded-full bg-surface flex items-center justify-center text-accent">
-          <Icon name="check" className="w-8 h-8" />
-        </div>
+        <AppLogo size="xl" className="shadow-md" />
 
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold tracking-tight">Talika</h1>

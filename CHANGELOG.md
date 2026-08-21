@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Designed a custom minimalist SVG app icon featuring a squircle badge, top task header, and dynamic checkmark monogram.
+- Replaced default favicon with high-res scalable `favicon.svg` and `icon.svg` with PWA and Chrome MV3 extension support.
+- Added `<AppLogo />` UI component and `logo` icon to `src/ui/icons.tsx`.
+- Integrated Talika app logo across the navigation header (`AuthBar`), login hero card (`LoginView`), and settings dialog footer (`SettingsDialog`).
 
 ## [0.1.0] - 2026-08-21
 ### Added

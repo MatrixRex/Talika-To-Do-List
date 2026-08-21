@@ -68,9 +68,32 @@ import {
   GripVertical,
   Link as LinkIcon
 } from 'lucide-react';
+import type { SVGProps } from 'react';
+
+function TalikaLogoIcon({ size = 20, className, ...props }: SVGProps<SVGSVGElement> & { size?: number | string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      {...props}
+    >
+      <path d="M4 5.5h16" />
+      <path d="M5.5 13.5l4 4 9-9" />
+    </svg>
+  );
+}
 
 export const ICONS = {
   // Navigation & Core UI
+  logo: TalikaLogoIcon,
   folder: Folder,
   inbox: Inbox,
   check: CheckCircle,

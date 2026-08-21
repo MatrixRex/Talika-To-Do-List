@@ -1,4 +1,4 @@
-import { Dialog, Button, ListRow, IconButton } from '../ui';
+import { Dialog, Button, ListRow, IconButton, AppLogo } from '../ui';
 import { Icon } from '../ui/icons';
 import { useAuth } from '../context/AuthContext';
 
@@ -89,7 +89,10 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
 
         {/* Footer Section */}
         <div className="flex items-center justify-between mt-2 pt-4 border-t border-surface-border">
-          <span className="text-xs text-text-muted font-mono">v{__APP_VERSION__}</span>
+          <div className="flex items-center gap-1.5">
+            <AppLogo size="sm" />
+            <span className="text-xs text-text-muted font-mono">v{__APP_VERSION__}</span>
+          </div>
           <Button variant="primary" onClick={onClose}>Done</Button>
         </div>
       </div>

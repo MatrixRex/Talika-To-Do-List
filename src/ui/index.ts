@@ -9,5 +9,6 @@ export * from './Dialog';
 export * from './menu-position';
 export * from './icons';
 export * from './colors';
+export * from './AppLogo';
 export * from './Animation';
 export * from './useDelayedUnmount';

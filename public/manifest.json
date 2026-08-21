@@ -8,5 +8,10 @@
   "side_panel": {
     "default_path": "index.html"
   },
+  "icons": {
+    "16": "favicon.svg",
+    "48": "favicon.svg",
+    "128": "favicon.svg"
+  },
   "permissions": ["sidePanel"]
 }

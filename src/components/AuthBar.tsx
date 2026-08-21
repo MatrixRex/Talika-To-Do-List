@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { AppLogo } from '../ui';
 import { SettingsDialog } from './SettingsDialog';
 
 export function AuthBar() {
@@ -14,7 +15,8 @@ export function AuthBar() {
   return (
     <header className="relative flex items-center justify-between px-4 py-2 border-b border-surface-border">
       <div className="flex items-center gap-2">
-        <span className="font-bold tracking-tight text-accent text-lg">Talika</span>
+        <AppLogo size="sm" />
+        <span className="font-bold tracking-tight text-text text-lg">Talika</span>
       </div>
 
       <div className="relative">
