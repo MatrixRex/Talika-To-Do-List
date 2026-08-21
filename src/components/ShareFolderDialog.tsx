@@ -18,6 +18,7 @@ import {
   leaveFolder,
   countFolderReminders,
 } from '../lib/db';
+import { buildFolderShareLink } from '../lib/share-links';
 
 interface ShareFolderDialogProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export function ShareFolderDialog({
 }: ShareFolderDialogProps) {
   const [inviteEmail, setInviteEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [members, setMembers] = useState<User[]>([]);
@@ -54,6 +56,7 @@ export function ShareFolderDialog({
       setErrorMessage(null);
       setSuccessMessage(null);
       setInviteEmail('');
+      setCopiedLink(false);
       setLoading(true);
       fetchUsersByIds(folder.memberIds)
         .then((users) => {
@@ -71,6 +74,31 @@ export function ShareFolderDialog({
 
   const colorStyle = getFolderColorStyle(folder.color);
   const iconName = (folder.icon as IconName) || 'folder';
+
+  const handleCopyLink = async () => {
+    if (!folder) return;
+    const link = buildFolderShareLink(folder.id);
+    try {
+      if (navigator.share && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        await navigator.share({
+          title: `Join "${folder.name}" on Talika`,
+          text: `Collaborate with me on "${folder.name}" on Talika`,
+          url: link,
+        });
+        return;
+      }
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
+  };
 
   const handleInviteSubmit = async () => {
     if (!inviteEmail.trim()) return;
@@ -213,6 +241,40 @@ export function ShareFolderDialog({
               {successMessage}
             </div>
           )}
+
+          {/* Share Link Section */}
+          <div className="flex flex-col gap-2 p-3 bg-surface/50 rounded-md border border-surface-border">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-text uppercase tracking-wider flex items-center gap-1.5">
+                <Icon name="link" className="text-accent" />
+                <span>Share Link</span>
+              </span>
+              {copiedLink && (
+                <span className="text-xs text-accent font-medium">
+                  Copied to clipboard!
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-text-muted">
+              Anyone with this link can join this folder as an editor.
+            </p>
+            <div className="flex items-center gap-2">
+              <Input
+                readOnly
+                value={buildFolderShareLink(folder.id)}
+                className="text-xs text-text-muted truncate select-all bg-background cursor-text"
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+              <Button
+                variant="secondary"
+                onClick={handleCopyLink}
+                className="shrink-0 flex items-center gap-1.5"
+              >
+                <Icon name={copiedLink ? 'check' : 'copy'} className={copiedLink ? 'text-accent' : ''} />
+                <span>{copiedLink ? 'Copied' : 'Copy'}</span>
+              </Button>
+            </div>
+          </div>
 
           {/* Invite Section (Owner only) */}
           {isOwner && (

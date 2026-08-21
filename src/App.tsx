@@ -13,11 +13,14 @@ import {
   setReminder,
   reorderItem,
   reorderFolder,
-  updateFolder
+  updateFolder,
+  getFolderPreview,
+  joinFolder
 } from './lib/db';
 import { generateKeyBetween, compareSortKeys } from './lib/sort-keys';
 import { generateUUID } from './lib/uuid';
-import type { Item, Folder, Reminder } from './lib/schema';
+import { parseJoinFolderId } from './lib/share-links';
+import type { Item, Folder, Reminder, User } from './lib/schema';
 import { useFilteredItems } from './lib/useFilteredItems';
 import { rescheduleAllReminders } from './lib/notifications';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -25,6 +28,7 @@ import { AuthBar } from './components/AuthBar';
 import { LoginView } from './components/LoginView';
 import { HomeView } from './components/HomeView';
 import { FolderView } from './components/FolderView';
+import { JoinFolderDialog } from './components/JoinFolderDialog';
 import './App.css';
 
 function MainApp() {
@@ -32,6 +36,9 @@ function MainApp() {
   const [rawItems, setItems] = useState<Item[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+  const [pendingJoinFolderId, setPendingJoinFolderId] = useState<string | null>(null);
+  const [joinPreview, setJoinPreview] = useState<{ folder: Folder; owner: User | null } | null>(null);
+  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
 
   const hideCompleted = userProfile?.prefs?.hideCompletedTasks ?? true;
   const items = useFilteredItems(rawItems, hideCompleted);
@@ -82,16 +89,64 @@ function MainApp() {
     rescheduleAllReminders(items).catch(console.error);
   }, [items]);
 
-  // Synchronize folder navigation with browser history for back gesture & button support
+  // Synchronize folder navigation & share join links with browser history
   useEffect(() => {
-    const handlePopState = (e: PopStateEvent) => {
-      const state = e.state as { folderId?: string | null } | null;
-      setActiveFolderId(state?.folderId || null);
+    const handleHashAndPopState = (e?: Event) => {
+      const hash = window.location.hash;
+      const joinId = parseJoinFolderId(hash);
+      if (joinId) {
+        setPendingJoinFolderId(joinId);
+      } else if (hash.startsWith('#folder-')) {
+        const fid = hash.replace('#folder-', '');
+        setActiveFolderId(fid || null);
+      } else {
+        const state = (e && 'state' in e ? (e as PopStateEvent).state : window.history.state) as { folderId?: string | null } | null;
+        setActiveFolderId(state?.folderId || null);
+      }
     };
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    handleHashAndPopState();
+    window.addEventListener('popstate', handleHashAndPopState);
+    window.addEventListener('hashchange', handleHashAndPopState);
+    return () => {
+      window.removeEventListener('popstate', handleHashAndPopState);
+      window.removeEventListener('hashchange', handleHashAndPopState);
+    };
   }, []);
+
+  // Handle folder share link join preview & verification
+  useEffect(() => {
+    if (!firebaseUser || !pendingJoinFolderId) return;
+
+    // Check if user is already a member of this folder
+    const existingFolder = folders.find((f) => f.id === pendingJoinFolderId);
+    if (existingFolder) {
+      handleSelectFolder(pendingJoinFolderId);
+      setPendingJoinFolderId(null);
+      return;
+    }
+
+    getFolderPreview(pendingJoinFolderId)
+      .then((preview) => {
+        if (preview) {
+          if (preview.folder.memberIds.includes(firebaseUser.uid)) {
+            handleSelectFolder(pendingJoinFolderId);
+            setPendingJoinFolderId(null);
+          } else {
+            setJoinPreview(preview);
+            setIsJoinDialogOpen(true);
+          }
+        } else {
+          console.warn('Folder not found for join link:', pendingJoinFolderId);
+          setPendingJoinFolderId(null);
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch join preview:', err);
+        setPendingJoinFolderId(null);
+      });
+  }, [firebaseUser, pendingJoinFolderId, folders]);
 
   // Handle Capacitor Android hardware back button
   useEffect(() => {
@@ -125,6 +180,8 @@ function MainApp() {
   const handleSelectFolder = (id: string | null) => {
     if (id) {
       window.history.pushState({ folderId: id }, '', `#folder-${id}`);
+    } else {
+      window.history.pushState(null, '', window.location.pathname);
     }
     setActiveFolderId(id);
   };
@@ -133,8 +190,26 @@ function MainApp() {
     if (window.history.state?.folderId) {
       window.history.back();
     } else {
+      window.history.replaceState(null, '', window.location.pathname);
       setActiveFolderId(null);
     }
+  };
+
+  const handleJoinConfirm = async () => {
+    if (!joinPreview || !firebaseUser) return;
+    const targetFolderId = joinPreview.folder.id;
+    await joinFolder(targetFolderId, firebaseUser.uid);
+    setIsJoinDialogOpen(false);
+    setJoinPreview(null);
+    setPendingJoinFolderId(null);
+    handleSelectFolder(targetFolderId);
+  };
+
+  const handleJoinDecline = () => {
+    setIsJoinDialogOpen(false);
+    setJoinPreview(null);
+    setPendingJoinFolderId(null);
+    window.history.replaceState(null, '', window.location.pathname);
   };
 
   if (loading) {
@@ -529,6 +604,13 @@ function MainApp() {
           />
         )}
       </div>
+      <JoinFolderDialog
+        isOpen={isJoinDialogOpen}
+        folder={joinPreview?.folder || null}
+        owner={joinPreview?.owner || null}
+        onJoin={handleJoinConfirm}
+        onClose={handleJoinDecline}
+      />
     </main>
   );
 }

@@ -78,7 +78,7 @@ export function SubtaskItem({ subtask, index = 0, onComplete, onRename, onDelete
             </span>
             <span
               aria-hidden="true"
-              className={`absolute left-0 top-1/2 -translate-y-1/2 h-[1.5px] bg-text-muted pointer-events-none transition-all duration-300 ease-out origin-left ${
+              className={`absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-text-muted pointer-events-none transition-all duration-300 ease-out origin-left ${
                 isCompleted ? 'w-full scale-x-100 opacity-90' : 'w-full scale-x-0 opacity-0'
               }`}
             />
