@@ -211,9 +211,8 @@ describe('Stage 8 Exit Suite — Collaboration & Move-Out Semantics', () => {
       expect(bobItemSnap.exists()).toBe(true);
       expect((bobItemSnap.data() as Item).memberIds).toEqual([aliceUid, bobUid]);
 
-      // 5. Non-member Charlie cannot read it
+      // 5. Non-member Charlie cannot read items from the shared folder
       const charlieDb = testEnv.authenticatedContext(charlieUid).firestore();
-      await assertFails(getDoc(doc(charlieDb, 'folders', folderId)));
       await assertFails(getDoc(doc(charlieDb, 'items', item1Id)));
     });
 
@@ -338,8 +337,7 @@ describe('Stage 8 Exit Suite — Collaboration & Move-Out Semantics', () => {
       });
       await assertSucceeds(batch.commit());
 
-      // Bob's access is now immediately denied
-      await assertFails(getDoc(doc(bobDb, 'folders', folderId)));
+      // Bob's access to tasks and item modification is now immediately denied
       await assertFails(getDoc(doc(bobDb, 'items', itemId)));
       await assertFails(updateDoc(doc(bobDb, 'items', itemId), { title: 'Unauthorized Edit' }));
     });
@@ -393,8 +391,7 @@ describe('Stage 8 Exit Suite — Collaboration & Move-Out Semantics', () => {
       });
       await assertSucceeds(batch.commit());
 
-      // Bob no longer has access
-      await assertFails(getDoc(doc(bobDb, 'folders', folderId)));
+      // Bob no longer has access to items in the folder
       await assertFails(getDoc(doc(bobDb, 'items', itemId)));
     });
   });
@@ -633,6 +630,114 @@ describe('Stage 8 Exit Suite — Collaboration & Move-Out Semantics', () => {
       ].sort(compareSortKeys);
 
       expect(combined.map((t) => t.id)).toEqual(['task-3', 'task-1', 'task-2']);
+    });
+  });
+
+  describe('Share Links & Self-Join Security Rules', () => {
+    const linkFolderId = 'folder-share-link-1';
+    const linkItemId = 'item-share-link-1';
+
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (admin) => {
+        const db = admin.firestore();
+        await setDoc(doc(db, 'folders', linkFolderId), {
+          id: linkFolderId,
+          ownerId: aliceUid,
+          name: 'Link Shared Project',
+          icon: 'briefcase',
+          color: 'purple',
+          sortKey: 'a0',
+          memberIds: [aliceUid],
+          roles: { [aliceUid]: 'owner' },
+        });
+
+        await setDoc(doc(db, 'items', linkItemId), {
+          id: linkItemId,
+          folderId: linkFolderId,
+          parentId: null,
+          ownerId: aliceUid,
+          memberIds: [aliceUid],
+          title: 'Shared Link Task',
+          done: false,
+          completedAt: null,
+          sortKey: 'a0',
+          reminder: null,
+        });
+      });
+    });
+
+    it('allows an authenticated non-member to fetch folder metadata by ID for preview', async () => {
+      const charlieDb = testEnv.authenticatedContext(charlieUid).firestore();
+      const snap = await getDoc(doc(charlieDb, 'folders', linkFolderId));
+      expect(snap.exists()).toBe(true);
+      expect(snap.data()?.name).toBe('Link Shared Project');
+      expect(snap.data()?.ownerId).toBe(aliceUid);
+    });
+
+    it('denies an unauthenticated user from fetching folder metadata', async () => {
+      const anonDb = testEnv.unauthenticatedContext().firestore();
+      await assertFails(getDoc(doc(anonDb, 'folders', linkFolderId)));
+    });
+
+    it('allows an authenticated user to self-join a folder as editor', async () => {
+      const charlieDb = testEnv.authenticatedContext(charlieUid).firestore();
+      await assertSucceeds(
+        updateDoc(doc(charlieDb, 'folders', linkFolderId), {
+          memberIds: [aliceUid, charlieUid],
+          roles: { [aliceUid]: 'owner', [charlieUid]: 'editor' },
+          updatedAt: serverTimestamp(),
+        })
+      );
+
+      const snap = await getDoc(doc(charlieDb, 'folders', linkFolderId));
+      expect((snap.data() as Folder).memberIds).toContain(charlieUid);
+      expect((snap.data() as Folder).roles[charlieUid]).toBe('editor');
+    });
+
+    it('rejects self-join if user tries to grant themselves owner role or change folder properties', async () => {
+      const charlieDb = testEnv.authenticatedContext(charlieUid).firestore();
+      
+      // Attempting to become owner
+      await assertFails(
+        updateDoc(doc(charlieDb, 'folders', linkFolderId), {
+          memberIds: [aliceUid, charlieUid],
+          roles: { [aliceUid]: 'owner', [charlieUid]: 'owner' },
+          updatedAt: serverTimestamp(),
+        })
+      );
+
+      // Attempting to rename folder while self-joining
+      await assertFails(
+        updateDoc(doc(charlieDb, 'folders', linkFolderId), {
+          name: 'Hacked Folder Name',
+          memberIds: [aliceUid, charlieUid],
+          roles: { [aliceUid]: 'owner', [charlieUid]: 'editor' },
+          updatedAt: serverTimestamp(),
+        })
+      );
+    });
+
+    it('allows newly joined folder member to update item memberIds in that folder', async () => {
+      const charlieDb = testEnv.authenticatedContext(charlieUid).firestore();
+      
+      // First self-join folder
+      await updateDoc(doc(charlieDb, 'folders', linkFolderId), {
+        memberIds: [aliceUid, charlieUid],
+        roles: { [aliceUid]: 'owner', [charlieUid]: 'editor' },
+        updatedAt: serverTimestamp(),
+      });
+
+      // Then update item memberIds to synchronize
+      await assertSucceeds(
+        updateDoc(doc(charlieDb, 'items', linkItemId), {
+          memberIds: [aliceUid, charlieUid],
+          updatedAt: serverTimestamp(),
+          updatedBy: charlieUid,
+        })
+      );
+
+      const itemSnap = await getDoc(doc(charlieDb, 'items', linkItemId));
+      expect((itemSnap.data() as Item).memberIds).toContain(charlieUid);
     });
   });
 });

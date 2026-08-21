@@ -21,24 +21,40 @@ service cloud.firestore {
     }
     
     match /folders/{folderId} {
-      allow read: if isMember(resource.data.memberIds);
+      allow get: if isSignedIn();
+      allow list: if isMember(resource.data.memberIds);
       
       allow create: if isMember(request.resource.data.memberIds) 
                     && isOwner(request.resource.data.ownerId);
                     
-      allow update: if isMember(resource.data.memberIds)
-                    && isMember(request.resource.data.memberIds)
-                    // Editor cannot change roles or delete folder
-                    // Here we simplify: only owner can change roles/memberIds
-                    && (
-                      (resource.data.roles[request.auth.uid] == 'owner') 
-                      || 
-                      (
-                        request.resource.data.roles == resource.data.roles &&
-                        request.resource.data.memberIds == resource.data.memberIds &&
-                        request.resource.data.ownerId == resource.data.ownerId
+      function isSelfJoin() {
+        return isSignedIn()
+          && request.auth.uid in request.resource.data.memberIds
+          && !(request.auth.uid in resource.data.memberIds)
+          && request.resource.data.ownerId == resource.data.ownerId
+          && request.resource.data.name == resource.data.name
+          && request.resource.data.icon == resource.data.icon
+          && request.resource.data.color == resource.data.color
+          && request.resource.data.sortKey == resource.data.sortKey
+          && request.resource.data.roles[request.auth.uid] == 'editor';
+      }
+
+      allow update: if (
+                      isMember(resource.data.memberIds)
+                      && isMember(request.resource.data.memberIds)
+                      // Editor cannot change roles or delete folder
+                      // Here we simplify: only owner can change roles/memberIds
+                      && (
+                        (resource.data.roles[request.auth.uid] == 'owner') 
+                        || 
+                        (
+                          request.resource.data.roles == resource.data.roles &&
+                          request.resource.data.memberIds == resource.data.memberIds &&
+                          request.resource.data.ownerId == resource.data.ownerId
+                        )
                       )
-                    );
+                    )
+                    || isSelfJoin();
                     
       allow delete: if isMember(resource.data.memberIds) 
                     && resource.data.roles[request.auth.uid] == 'owner';
@@ -66,7 +82,21 @@ service cloud.firestore {
                         request.resource.data.ownerId == getParent(request.resource.data.parentId).ownerId
                     ));
                     
-      allow update: if isMember(resource.data.memberIds)
+      allow update: if (
+                      isMember(resource.data.memberIds)
+                      || (
+                        isSignedIn()
+                        && resource.data.folderId != null
+                        && request.auth.uid in get(/databases/$(database)/documents/folders/$(resource.data.folderId)).data.memberIds
+                        && request.auth.uid in request.resource.data.memberIds
+                        && request.resource.data.folderId == resource.data.folderId
+                        && request.resource.data.parentId == resource.data.parentId
+                        && request.resource.data.ownerId == resource.data.ownerId
+                        && request.resource.data.title == resource.data.title
+                        && request.resource.data.done == resource.data.done
+                        && request.resource.data.sortKey == resource.data.sortKey
+                      )
+                    )
                     && isMember(request.resource.data.memberIds)
                     // Depth check for move
                     && (request.resource.data.parentId == null || (

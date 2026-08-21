@@ -145,10 +145,14 @@ describe('Firestore Security Rules Unit Tests (Stage 3 Exit Suite)', () => {
       const aliceDb = testEnv.authenticatedContext('alice').firestore();
       const bobDb = testEnv.authenticatedContext('bob').firestore();
       const charlieDb = testEnv.authenticatedContext('charlie').firestore();
+      const unauthDb = testEnv.unauthenticatedContext().firestore();
 
       await assertSucceeds(getDoc(doc(aliceDb, 'folders', 'folder-shared')));
       await assertSucceeds(getDoc(doc(bobDb, 'folders', 'folder-shared')));
-      await assertFails(getDoc(doc(charlieDb, 'folders', 'folder-shared')));
+      // Authenticated non-member can fetch folder document by ID for preview
+      await assertSucceeds(getDoc(doc(charlieDb, 'folders', 'folder-shared')));
+      // Unauthenticated user is denied
+      await assertFails(getDoc(doc(unauthDb, 'folders', 'folder-shared')));
     });
 
     it('denies editor from deleting folder or modifying memberIds/roles', async () => {
