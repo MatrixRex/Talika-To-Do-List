@@ -1,6 +1,6 @@
 # Talika (তালিকা) — Simple To-Do & Task Management
 
-[![Test Suite](<https://img.shields.io/badge/tests-130%20passed-brightgreen.svg>)](<file:///h:/web/13-Talika/Talika-To%20Do%20List/src/lib>)
+[![Test Suite](<https://img.shields.io/badge/tests-132%20passed-brightgreen.svg>)](<file:///h:/web/13-Talika/Talika-To%20Do%20List/src/lib>)
 [![Framework](https://img.shields.io/badge/react-19-blue.svg)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/typescript-6.0-blue.svg)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/vite-8.2-purple.svg)](https://vite.dev/)

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.1.1] - 2026-08-22
 ### Added
 - Designed a custom minimalist SVG app icon featuring the Bengali letter **তা** (first syllable of তালিকা - Talika) sculpted to fit seamlessly inside a circle.
 - Replaced default favicon with high-res scalable `favicon.svg` and `icon.svg` with PWA and Chrome MV3 extension support.
