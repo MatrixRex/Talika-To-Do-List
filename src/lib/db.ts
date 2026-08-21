@@ -552,6 +552,95 @@ export async function shareFolder(
   return { strippedCount };
 }
 
+export async function getFolderPreview(
+  folderId: string
+): Promise<{ folder: Folder; owner: User | null } | null> {
+  const folderRef = doc(db, 'folders', folderId);
+  const folderSnap = await getDoc(folderRef);
+  if (!folderSnap.exists()) return null;
+
+  const folder = folderSnap.data() as Folder;
+  let owner: User | null = null;
+  try {
+    const ownerSnap = await getDoc(doc(db, 'users', folder.ownerId));
+    if (ownerSnap.exists()) {
+      owner = ownerSnap.data() as User;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch folder owner profile:', err);
+  }
+
+  return { folder, owner };
+}
+
+export async function joinFolder(
+  folderId: string,
+  actorId: string
+): Promise<{ strippedCount: number }> {
+  const folderRef = doc(db, 'folders', folderId);
+  const folderSnap = await getDoc(folderRef);
+  if (!folderSnap.exists()) throw new Error('Folder not found');
+
+  const folder = folderSnap.data() as Folder;
+  if (folder.memberIds.includes(actorId)) {
+    return { strippedCount: 0 };
+  }
+
+  const newMemberIds = [...folder.memberIds, actorId];
+  const newRoles = {
+    ...folder.roles,
+    [actorId]: 'editor' as const,
+  };
+
+  const isBecomingShared = folder.memberIds.length === 1;
+  const now = Timestamp.now();
+
+  // Step 1: Update folder document so rules recognize actor as folder member
+  await updateDoc(folderRef, {
+    memberIds: newMemberIds,
+    roles: newRoles,
+    updatedAt: now,
+  });
+
+  // Step 2: Fetch and update items belonging to this folder
+  const itemsRef = collection(db, 'items');
+  const q = query(itemsRef, where('folderId', '==', folderId));
+  const snap = await getDocs(q);
+
+  let strippedCount = 0;
+  let currentBatch = writeBatch(db);
+  let opCount = 0;
+
+  for (const itemDoc of snap.docs) {
+    const itemData = itemDoc.data() as Item;
+    const updates: Partial<Item> = {
+      memberIds: newMemberIds,
+      updatedAt: now,
+      updatedBy: actorId,
+    };
+
+    if (isBecomingShared && itemData.reminder !== null) {
+      updates.reminder = null;
+      strippedCount++;
+    }
+
+    currentBatch.update(itemDoc.ref, updates);
+    opCount++;
+
+    if (opCount >= BATCH_LIMIT) {
+      await currentBatch.commit();
+      currentBatch = writeBatch(db);
+      opCount = 0;
+    }
+  }
+
+  if (opCount > 0) {
+    await currentBatch.commit();
+  }
+
+  return { strippedCount };
+}
+
 export async function lookupUserByEmail(email: string): Promise<User | null> {
   const trimmed = email.trim().toLowerCase();
   if (!trimmed) return null;

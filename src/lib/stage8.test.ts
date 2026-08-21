@@ -739,5 +739,61 @@ describe('Stage 8 Exit Suite — Collaboration & Move-Out Semantics', () => {
       const itemSnap = await getDoc(doc(charlieDb, 'items', linkItemId));
       expect((itemSnap.data() as Item).memberIds).toContain(charlieUid);
     });
+
+    it('strips reminders when a private folder is joined via link (Invariant 5)', async () => {
+      const charlieDb = testEnv.authenticatedContext(charlieUid).firestore();
+      const remFolderId = 'folder-rem-join';
+      const remItemId = 'item-rem-join';
+
+      await testEnv.withSecurityRulesDisabled(async (admin) => {
+        const db = admin.firestore();
+        await setDoc(doc(db, 'folders', remFolderId), {
+          id: remFolderId,
+          ownerId: aliceUid,
+          name: 'Private Folder with Reminder',
+          icon: 'bell',
+          color: 'crimson',
+          sortKey: 'a0',
+          memberIds: [aliceUid],
+          roles: { [aliceUid]: 'owner' },
+        });
+
+        await setDoc(doc(db, 'items', remItemId), {
+          id: remItemId,
+          folderId: remFolderId,
+          parentId: null,
+          ownerId: aliceUid,
+          memberIds: [aliceUid],
+          title: 'Remind me before share',
+          done: false,
+          completedAt: null,
+          sortKey: 'a0',
+          reminder: {
+            fireAt: serverTimestamp(),
+            recurrence: { kind: 'once' },
+          },
+        });
+      });
+
+      // Self-join folder
+      await updateDoc(doc(charlieDb, 'folders', remFolderId), {
+        memberIds: [aliceUid, charlieUid],
+        roles: { [aliceUid]: 'owner', [charlieUid]: 'editor' },
+        updatedAt: serverTimestamp(),
+      });
+
+      // Update item with reminder stripped
+      await assertSucceeds(
+        updateDoc(doc(charlieDb, 'items', remItemId), {
+          memberIds: [aliceUid, charlieUid],
+          reminder: null,
+          updatedAt: serverTimestamp(),
+          updatedBy: charlieUid,
+        })
+      );
+
+      const snap = await getDoc(doc(charlieDb, 'items', remItemId));
+      expect((snap.data() as Item).reminder).toBeNull();
+    });
   });
 });
