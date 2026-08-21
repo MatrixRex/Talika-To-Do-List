@@ -65,7 +65,8 @@ import {
   Dumbbell,
   Sparkles,
   Palette,
-  GripVertical
+  GripVertical,
+  Link as LinkIcon
 } from 'lucide-react';
 
 export const ICONS = {
@@ -82,6 +83,7 @@ export const ICONS = {
   share: Share,
   settings: Settings,
   copy: Copy,
+  link: LinkIcon,
   arrowUpRight: ArrowUpRight,
   trash: Trash2,
   edit: Pencil,
