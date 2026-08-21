@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Direct Folder Share Links support (`#join=<folderId>`) with native Web Share API and clipboard copy fallback.
+- Dedicated `JoinFolderDialog` modal showing folder icon, color badge, folder name, owner information, and member count.
+- Unauthenticated join state persistence across Google Sign-In with automatic post-login join prompt.
+- Granular Firestore security rules allowing authenticated folder previews and secure self-joining as an editor.
 - Centralized Animation Engine with Apple-style fluid easing (`cubic-bezier(0.2, 0, 0, 1)`).
 - Fast Mode and Reduce Animations user preferences in settings.
 - Staggered waterfall entrance animations for tasks and folders (`AnimateEnter`).

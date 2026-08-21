@@ -1,6 +1,6 @@
 # Talika (তালিকা) — Simple To-Do & Task Management
 
-[![Test Suite](<https://img.shields.io/badge/tests-103%20passed-brightgreen.svg>)](<file:///h:/web/13-Talika/Talika-To%20Do%20List/src/lib>)
+[![Test Suite](<https://img.shields.io/badge/tests-130%20passed-brightgreen.svg>)](<file:///h:/web/13-Talika/Talika-To%20Do%20List/src/lib>)
 [![Framework](https://img.shields.io/badge/react-19-blue.svg)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/typescript-6.0-blue.svg)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/vite-8.2-purple.svg)](https://vite.dev/)
@@ -48,7 +48,7 @@ Talika was engineered with strict invariants and production-grade engineering pr
 
 - **Unified Context Input Bar:** Dynamic mode switching (Task / Subtask / Folder / Search) based on active screen context, preserving input query across mode switches. Desktop accelerators (`#`, `/`, `Tab`, `Cmd/Ctrl+K`) and mobile gesture support.
 - **Customizable Folders:** Color scales powered by Radix and curated semantic icons with custom rename and delete flows.
-- **Real-Time Collaboration:** Share folders with collaborator email lookups, granular permissions (`owner` vs `editor`), and move-out claim semantics.
+- **Real-Time Collaboration & Share Links:** Direct shareable folder links (`#join=<folderId>`) with mobile sharing, join confirmation modals, collaborator email lookups, granular permissions (`owner` vs `editor`), and move-out claim semantics.
 - **Drag & Drop Reordering:** Smooth touch and pointer drag-and-drop using `@dnd-kit`.
 - **Flexible Reminders & Recurrence:** Once, daily, weekly, monthly (with month-end leap year resilience), and interval schedules powered by Capacitor Local Notifications.
 - **Account Backup & Wipe:** Full account JSON export/import and clean batched account data wipe.

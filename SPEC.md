@@ -482,12 +482,15 @@ change roles · move-out transfers ownership and removes it for everyone else.
 
 **Status:** Completed.
 - User lookup by email with security rules granting authenticated read access for collaborator discovery and profile rendering.
-- `shareFolder` denormalizes `memberIds` across all folder items and subtasks in client-side batches (≤500 ops), automatically stripping reminders on shared items per Invariant 5 with a warning dialog.
-- `ShareFolderDialog` modal composed of `src/ui/` primitives with email invitations, role badges (`owner` / `editor`), reminder removal warning, member revocation, and self-leave flows.
+- Direct folder share links (`#join=<folderId>`) with native mobile `navigator.share` support and clipboard copy fallback, functioning seamlessly on GitHub Pages subpaths, custom domains, and PWAs without server 404s.
+- `JoinFolderDialog` modal composed of `src/ui/` primitives displaying folder icon, color badge, owner profile preview, and join/decline actions.
+- Unauthenticated join state persistence across Google Sign-In with automatic join dialog triggering post-login.
+- `shareFolder` and `joinFolder` denormalize `memberIds` across all folder items and subtasks in client-side batches (≤500 ops), automatically stripping reminders on shared items per Invariant 5 with a warning dialog.
+- `ShareFolderDialog` modal composed of `src/ui/` primitives with direct share links, email invitations, role badges (`owner` / `editor`), reminder removal warning, member revocation, and self-leave flows.
 - Move-out claim semantics (§5) fully implemented: mover claims ownership (`ownerId = moverUid`, `memberIds = [moverUid]`, `folderId = null`), regenerates `sortKey`, updates subtasks, with confirmation dialog warning of isolation from other members.
 - Move-into-shared folder strips reminder and warns the user first.
-- Firestore security rules updated and verified in `rules.test.ts` (editor cannot delete folder or elevate roles; non-members and revoked members are immediately denied; reminder invariant strictly enforced).
-- Exit test suite in `src/lib/stage8.test.ts` (11 tests covering invitation, denormalization, reminder stripping, revocation, leave folder, move-out claim semantics, scale batching, and collaborative reorder consistency).
+- Firestore security rules updated and verified in `rules.test.ts` and `stage8.test.ts` (authenticated `get` allowed for folder preview, granular `isSelfJoin` validation preventing owner elevation or folder property mutation, editor cannot delete folder, reminder invariant strictly enforced).
+- Exit test suite in `src/lib/stage8.test.ts` and `src/lib/share-links.test.ts` (20 tests covering invitation, direct share link builder & parser, preview fetching, self-join validation, denormalization, reminder stripping, revocation, leave folder, move-out claim semantics, scale batching, and collaborative reorder consistency).
 
 ### Stage 9 — Performance and ship
 Optimistic UI mutations: all task and folder mutations (create, rename, toggle, delete, duplicate, promote, move, reorder, and reminders) update React state instantaneously (<16ms) with automatic rollback on error.
