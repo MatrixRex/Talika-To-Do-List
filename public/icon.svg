@@ -11,17 +11,17 @@
     </linearGradient>
   </defs>
   
-  <!-- Circular Container -->
+  <!-- Circular Base Container -->
   <circle cx="256" cy="256" r="236" fill="url(#talika-bg)"/>
   <circle cx="256" cy="256" r="232" stroke="url(#talika-glow)" stroke-width="4"/>
 
-  <!-- Bangla 'তা' (Ta) - First syllable of Talika (তালিকা) -->
-  <!-- Top Matra (মাত্রা) -->
-  <path d="M 120 144 H 392" stroke="#FFFFFF" stroke-width="36" stroke-linecap="round"/>
+  <!-- Authentic Bangla 'তা' (Ta) - First Syllable of Talika (তালিকা) -->
+  <!-- 1. Top Matra (মাত্রা) -->
+  <path d="M 112 144 H 400" stroke="#FFFFFF" stroke-width="36" stroke-linecap="round"/>
 
-  <!-- 'ত' Letter Body -->
-  <path d="M 188 202 C 194 184, 174 168, 156 182 C 134 200, 130 286, 174 340 C 212 386, 256 348, 270 280 C 276 244, 276 196, 276 196 L 276 356" stroke="#FFFFFF" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- 2. 'ত' (Taw) Glyph Body (Authentic '৩' structure under matra) -->
+  <path d="M 182 188 C 192 174, 168 158, 150 172 C 126 190, 122 265, 156 318 C 180 354, 218 332, 222 284 C 226 238, 240 274, 254 316 C 260 334, 268 355, 274 355" stroke="#FFFFFF" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 
-  <!-- 'া' (Aakar) Vertical Stem -->
-  <path d="M 356 144 V 356" stroke="#FFFFFF" stroke-width="36" stroke-linecap="round"/>
+  <!-- 3. 'া' (Aakar) Vertical Post -->
+  <path d="M 364 144 V 356" stroke="#FFFFFF" stroke-width="36" stroke-linecap="round"/>
 </svg>
