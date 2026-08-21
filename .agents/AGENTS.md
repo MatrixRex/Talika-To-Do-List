@@ -41,6 +41,8 @@ model, invariants, and stage plan.
 - Regenerate `sortKey` when an item changes list.
 - Multi-document changes use a batch.
 - Test on the real entry-level Android device, not DevTools throttling.
+- Update `CHANGELOG.md` whenever adding new features, changing behavior, or fixing bugs.
+- Update `README.md` appropriately when introducing new major features or instructions.
 
 ## Bundle budget
 

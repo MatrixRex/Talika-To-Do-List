@@ -57,6 +57,9 @@ export function AuthBar() {
           >
             Sign out
           </MenuItem>
+          <div className="px-4 pt-3 pb-1 border-t border-surface-border mt-1">
+            <p className="text-[10px] text-text-muted text-center font-mono">v{__APP_VERSION__}</p>
+          </div>
         </Menu>
       </div>
     </header>
