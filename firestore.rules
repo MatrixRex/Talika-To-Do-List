@@ -65,7 +65,11 @@ service cloud.firestore {
         return get(/databases/$(database)/documents/items/$(parentId)).data;
       }
       
-      allow read: if isMember(resource.data.memberIds);
+      allow read: if isMember(resource.data.memberIds) || (
+                      isSignedIn() &&
+                      resource.data.folderId != null &&
+                      request.auth.uid in get(/databases/$(database)/documents/folders/$(resource.data.folderId)).data.memberIds
+                    );
       
       allow create: if isMember(request.resource.data.memberIds)
                     // Depth check: if parentId != null, parent exists and parent's parentId == null

@@ -127,10 +127,15 @@ export async function syncUserProfile(firebaseUser: FirebaseUser): Promise<User>
     const userSnap = await getDoc(userRef);
     if (userSnap.exists()) {
       const raw = userSnap.data();
-      return UserSchema.parse({
+      let user = UserSchema.parse({
         ...raw,
         uid: firebaseUser.uid,
       });
+      if (user.email && user.email !== user.email.toLowerCase()) {
+        user.email = user.email.toLowerCase();
+        await updateDoc(userRef, { email: user.email });
+      }
+      return user;
     }
   } catch (err) {
     console.warn('Could not read user profile from Firestore, using defaults:', err);
@@ -139,7 +144,7 @@ export async function syncUserProfile(firebaseUser: FirebaseUser): Promise<User>
   // First sign-in: initialize user profile document with default preferences
   const initialUser: User = {
     uid: firebaseUser.uid,
-    email: firebaseUser.email || '',
+    email: (firebaseUser.email || '').toLowerCase(),
     displayName: firebaseUser.displayName || 'Anonymous User',
     photoURL: firebaseUser.photoURL || null,
     createdAt: Timestamp.now(),
