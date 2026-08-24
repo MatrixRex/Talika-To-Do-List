@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-08-24
+### Fixed
+- Resolved case sensitivity issue with email lookups preventing users from being found during folder sharing.
+- Fixed Firebase security rules for `joinFolder` so share links correctly sync tasks to the joining user.
+- Cache-busted the PWA icon by renaming it to `icon-v2.svg` to force home screen icon updates on installed devices.
+
 ## [0.1.1] - 2026-08-22
 ### Added
 - Designed a custom minimalist SVG app icon featuring the Bengali letter **তা** (first syllable of তালিকা - Talika) sculpted to fit seamlessly inside a circle.
