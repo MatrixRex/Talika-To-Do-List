@@ -127,7 +127,7 @@ export async function syncUserProfile(firebaseUser: FirebaseUser): Promise<User>
     const userSnap = await getDoc(userRef);
     if (userSnap.exists()) {
       const raw = userSnap.data();
-      let user = UserSchema.parse({
+      const user = UserSchema.parse({
         ...raw,
         uid: firebaseUser.uid,
       });
