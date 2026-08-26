@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.3] - 2026-08-27
 ### Fixed
 - Fixed settings toggle buttons getting stuck by including `reduceAnimations` and `fastMode` in Firestore preferences update payloads and adding immediate optimistic UI state updates in `AuthContext`.
 - Fixed newly added collaborators/editors being unable to add tasks or subtasks until page reload by ensuring proper inheritance of `ownerId`, `memberIds`, and `folderId` in `handleCreateTask` and verifying folder freshness before validation.
