@@ -131,5 +131,67 @@ describe('Schema Validations', () => {
       item.memberIds = ['user-1', 'user-2'];
       expect(() => validateItemContext(item, null, folder)).not.toThrow();
     });
+
+    it('validates editor creating a top-level task in a shared folder', () => {
+      const folder = createValidFolder(); // owned by user-1, members [user-1, user-2]
+      const editorUid = 'user-2';
+
+      const editorTask: Item = {
+        id: 'item-editor-1',
+        folderId: folder.id,
+        parentId: null,
+        ownerId: folder.ownerId, // inherits folder ownerId
+        memberIds: [...folder.memberIds],
+        title: 'Task created by editor',
+        done: false,
+        completedAt: null,
+        sortKey: 'a1',
+        reminder: null,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        updatedBy: editorUid,
+      };
+
+      expect(() => validateItemContext(editorTask, null, folder)).not.toThrow();
+    });
+
+    it('validates editor creating a subtask inheriting parent task properties', () => {
+      const folder = createValidFolder();
+      const editorUid = 'user-2';
+
+      const parentTask: Item = {
+        id: 'item-parent-1',
+        folderId: folder.id,
+        parentId: null,
+        ownerId: folder.ownerId,
+        memberIds: [...folder.memberIds],
+        title: 'Parent Task',
+        done: false,
+        completedAt: null,
+        sortKey: 'a0',
+        reminder: null,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        updatedBy: 'user-1',
+      };
+
+      const editorSubtask: Item = {
+        id: 'subtask-editor-1',
+        folderId: parentTask.folderId,
+        parentId: parentTask.id,
+        ownerId: parentTask.ownerId,
+        memberIds: [...parentTask.memberIds],
+        title: 'Subtask added by editor',
+        done: false,
+        completedAt: null,
+        sortKey: 's0',
+        reminder: null,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        updatedBy: editorUid,
+      };
+
+      expect(() => validateItemContext(editorSubtask, parentTask, folder)).not.toThrow();
+    });
   });
 });

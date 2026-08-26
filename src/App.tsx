@@ -319,15 +319,22 @@ function MainApp() {
 
   // Task actions
   const handleCreateTask = async (title: string, parentId?: string) => {
-    const targetFolderId = parentId
-      ? rawItems.find((i) => i.id === parentId)?.folderId ?? activeFolderId
+    const parentItem = parentId ? rawItems.find((i) => i.id === parentId) || null : null;
+    const targetFolderId = parentItem
+      ? parentItem.folderId
       : activeFolderId;
     const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) || null : null;
-    const memberIds = targetFolder ? targetFolder.memberIds : [firebaseUser.uid];
 
-    const parentItem = parentId ? rawItems.find((i) => i.id === parentId) || null : null;
+    const folderId = parentItem ? parentItem.folderId : targetFolderId;
+    const memberIds = parentItem
+      ? parentItem.memberIds
+      : (targetFolder ? targetFolder.memberIds : [firebaseUser.uid]);
+    const ownerId = parentItem
+      ? parentItem.ownerId
+      : (targetFolder ? targetFolder.ownerId : firebaseUser.uid);
+
     const siblingItems = rawItems
-      .filter((i) => i.folderId === targetFolderId && i.parentId === (parentId || null))
+      .filter((i) => i.folderId === folderId && i.parentId === (parentId || null))
       .sort(compareSortKeys);
     const lastKey = siblingItems.length > 0 ? siblingItems[siblingItems.length - 1].sortKey : null;
     const sortKey = generateKeyBetween(lastKey, null);
@@ -335,9 +342,9 @@ function MainApp() {
 
     const newItem: Item = {
       id: generateUUID(),
-      folderId: targetFolderId,
+      folderId,
       parentId: parentId || null,
-      ownerId: firebaseUser.uid,
+      ownerId,
       memberIds,
       title,
       done: false,

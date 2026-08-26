@@ -153,6 +153,8 @@ export async function syncUserProfile(firebaseUser: FirebaseUser): Promise<User>
       hideCompletedTasks: true,
       hideCompletedSubtasks: false,
       rememberLastFolder: false,
+      reduceAnimations: false,
+      fastMode: false,
     },
   };
 
@@ -180,6 +182,14 @@ export async function updateUserPreferences(uid: string, prefs: Partial<UserPref
   if (prefs.rememberLastFolder !== undefined) {
     updatePayload['prefs.rememberLastFolder'] = prefs.rememberLastFolder;
   }
+  if (prefs.reduceAnimations !== undefined) {
+    updatePayload['prefs.reduceAnimations'] = prefs.reduceAnimations;
+  }
+  if (prefs.fastMode !== undefined) {
+    updatePayload['prefs.fastMode'] = prefs.fastMode;
+  }
 
-  await updateDoc(userRef, updatePayload);
+  if (Object.keys(updatePayload).length > 0) {
+    await updateDoc(userRef, updatePayload);
+  }
 }

@@ -146,7 +146,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleUpdatePrefs = async (prefs: Partial<UserPrefs>) => {
     if (!firebaseUser) return;
-    await updateUserPreferences(firebaseUser.uid, prefs);
+    const previousProfile = userProfile;
+    // Optimistic UI update
+    setUserProfile((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        prefs: {
+          ...prev.prefs,
+          ...prefs,
+        },
+      };
+    });
+
+    try {
+      await updateUserPreferences(firebaseUser.uid, prefs);
+    } catch (err) {
+      console.error('Failed to update user preferences:', err);
+      setUserProfile(previousProfile);
+    }
   };
 
   return (

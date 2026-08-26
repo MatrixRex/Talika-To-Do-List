@@ -49,14 +49,21 @@ export function ShareFolderDialog({
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
 
   const isOwner = folder ? folder.ownerId === currentUserId : false;
+  const memberIdsKey = folder ? folder.memberIds.slice().sort().join(',') : '';
 
-  // Load member profiles whenever dialog opens or folder changes
+  // Reset dialog state when opening/closing
   useEffect(() => {
-    if (isOpen && folder) {
+    if (isOpen) {
       setErrorMessage(null);
       setSuccessMessage(null);
       setInviteEmail('');
       setCopiedLink(false);
+    }
+  }, [isOpen]);
+
+  // Load member profiles whenever dialog opens or memberIds change
+  useEffect(() => {
+    if (isOpen && folder) {
       setLoading(true);
       fetchUsersByIds(folder.memberIds)
         .then((users) => {
@@ -68,7 +75,8 @@ export function ShareFolderDialog({
           setLoading(false);
         });
     }
-  }, [isOpen, folder]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, folder?.id, memberIdsKey]);
 
   if (!folder) return null;
 
@@ -142,6 +150,9 @@ export function ShareFolderDialog({
 
   const executeShare = async (userToInvite: User) => {
     setLoading(true);
+    // Optimistically update members list immediately
+    setMembers((prev) => [...prev.filter((m) => m.uid !== userToInvite.uid), userToInvite]);
+
     try {
       const newMemberIds = [...folder.memberIds, userToInvite.uid];
       const result = await shareFolder(folder.id, newMemberIds, currentUserId);
@@ -155,16 +166,14 @@ export function ShareFolderDialog({
       setPendingInviteUser(null);
       setIsReminderWarningOpen(false);
 
-      // Refresh members list
-      const updatedMembers = await fetchUsersByIds(newMemberIds);
-      setMembers(updatedMembers);
-
       if (onFolderUpdated) {
         onFolderUpdated();
       }
     } catch (err: unknown) {
       console.error('Execute share error:', err);
       setErrorMessage((err as Error).message || 'Failed to share folder.');
+      // Re-fetch members to revert optimistic state on error
+      fetchUsersByIds(folder.memberIds).then(setMembers).catch(console.error);
     } finally {
       setLoading(false);
     }
@@ -175,10 +184,12 @@ export function ShareFolderDialog({
     setSuccessMessage(null);
     setLoading(true);
 
+    const prevMembers = members;
+    // Optimistically remove member
+    setMembers((prev) => prev.filter((m) => m.uid !== memberId));
+
     try {
       await revokeFolderMember(folder.id, memberId, currentUserId);
-      const updatedMembers = members.filter((m) => m.uid !== memberId);
-      setMembers(updatedMembers);
       setSuccessMessage('Member removed.');
 
       if (onFolderUpdated) {
@@ -187,6 +198,7 @@ export function ShareFolderDialog({
     } catch (err: unknown) {
       console.error('Revoke failed:', err);
       setErrorMessage((err as Error).message || 'Failed to remove member.');
+      setMembers(prevMembers);
     } finally {
       setLoading(false);
     }
@@ -312,7 +324,7 @@ export function ShareFolderDialog({
 
             <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
               {members.map((member) => {
-                const role = folder.roles[member.uid] || (member.uid === folder.ownerId ? 'owner' : 'editor');
+                const role = (folder.roles && folder.roles[member.uid]) || (member.uid === folder.ownerId ? 'owner' : 'editor');
                 const isSelf = member.uid === currentUserId;
                 const isMemberOwner = role === 'owner';
 

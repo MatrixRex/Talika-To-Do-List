@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Fixed
+- Fixed settings toggle buttons getting stuck by including `reduceAnimations` and `fastMode` in Firestore preferences update payloads and adding immediate optimistic UI state updates in `AuthContext`.
+- Fixed newly added collaborators/editors being unable to add tasks or subtasks until page reload by ensuring proper inheritance of `ownerId`, `memberIds`, and `folderId` in `handleCreateTask` and verifying folder freshness before validation.
+- Fixed `ShareFolderDialog` collaborator list updates by optimistically adding/removing members on invite/revoke and preventing unnecessary re-fetching on background sync.
 - Fixed prefer-const lint warning in `syncUserProfile` within `src/lib/auth.ts`.
 - Added fallback configuration defaults in `src/lib/firebase.ts` to ensure seamless test execution in headless environments.
 

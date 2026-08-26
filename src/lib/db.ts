@@ -108,10 +108,28 @@ export async function createItem(
   }
 
   let folder: Folder | null = cachedFolder ?? null;
-  if (item.folderId && folder === null) {
-    const folderSnap = await getCachedDoc(doc(db, 'folders', item.folderId));
-    if (folderSnap.exists()) {
-      folder = folderSnap.data() as Folder;
+  if (item.folderId) {
+    if (folder === null) {
+      const folderSnap = await getCachedDoc(doc(db, 'folders', item.folderId));
+      if (folderSnap.exists()) {
+        folder = folderSnap.data() as Folder;
+      }
+    }
+
+    // If folder was not in cache or memberIds don't match, fetch fresh server document
+    if (
+      !folder ||
+      folder.memberIds.length !== item.memberIds.length ||
+      !item.memberIds.every((id, idx) => id === folder!.memberIds[idx])
+    ) {
+      try {
+        const freshSnap = await getDoc(doc(db, 'folders', item.folderId));
+        if (freshSnap.exists()) {
+          folder = freshSnap.data() as Folder;
+        }
+      } catch {
+        // If offline or network error, fallback to existing folder snapshot
+      }
     }
   }
 
@@ -660,14 +678,19 @@ export async function lookupUserByEmail(email: string): Promise<User | null> {
 
 export async function fetchUsersByIds(uids: string[]): Promise<User[]> {
   if (!uids || uids.length === 0) return [];
-  const users: User[] = [];
-  for (const uid of uids) {
-    const snap = await getDoc(doc(db, 'users', uid));
-    if (snap.exists()) {
-      users.push(snap.data() as User);
+  const promises = uids.map(async (uid) => {
+    try {
+      const snap = await getCachedDoc(doc(db, 'users', uid));
+      if (snap.exists()) {
+        return snap.data() as User;
+      }
+      return null;
+    } catch {
+      return null;
     }
-  }
-  return users;
+  });
+  const results = await Promise.all(promises);
+  return results.filter((u): u is User => u !== null);
 }
 
 export async function revokeFolderMember(
