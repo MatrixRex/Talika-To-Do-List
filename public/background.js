@@ -2,6 +2,11 @@
  * Talika Chrome Extension - Background Service Worker (Manifest V3)
  */
 
+// Enable opening the side panel on extension action click
+chrome.sidePanel
+  ?.setPanelBehavior({ openPanelOnActionClick: true })
+  .catch((error) => console.error('Failed to set side panel behavior:', error));
+
 chrome.runtime.onInstalled.addListener(() => {
   // Create context menu to quickly open Talika in the side panel
   chrome.contextMenus.create({
@@ -23,4 +28,3 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     }
   }
 });
-

@@ -5,7 +5,6 @@
   "version": "0.1.4",
   "description": "Fast, minimal, offline-first to-do list with folders, subtasks, and reminders.",
   "action": {
-    "default_popup": "index.html",
     "default_title": "Talika",
     "default_icon": {
       "16": "icons/icon-16.png",
