@@ -26,6 +26,13 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
+  "oauth2": {
+    "client_id": "747615988111-9agbno014t787bmgrd97vfqm04m6e7bn.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile"
+    ]
+  },
   "permissions": [
     "sidePanel",
     "storage",
