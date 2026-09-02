@@ -75,7 +75,6 @@ export function ShareFolderDialog({
           setLoading(false);
         });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, folder?.id, memberIdsKey]);
 
   if (!folder) return null;

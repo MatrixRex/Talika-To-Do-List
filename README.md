@@ -1,6 +1,6 @@
 # Talika (তালিকা) — Simple To-Do & Task Management
 
-[![Test Suite](<https://img.shields.io/badge/tests-132%20passed-brightgreen.svg>)](<file:///h:/web/13-Talika/Talika-To%20Do%20List/src/lib>)
+[![Test Suite](https://img.shields.io/badge/tests-132%20passed-brightgreen.svg)](#testing--quality-assurance)
 [![Framework](https://img.shields.io/badge/react-19-blue.svg)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/typescript-6.0-blue.svg)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/vite-8.2-purple.svg)](https://vite.dev/)
@@ -157,14 +157,37 @@ npx cap open android
 
 From Android Studio, you can run the app on a connected physical device or emulator, or build an APK / AAB.
 
-### Chrome Extension (MV3)
+### Chrome Extension (Manifest V3)
 
-The project includes an MV3 manifest (`public/manifest.json`) supporting both toolbar popups and the Chrome side panel:
+Talika can be loaded directly as a Manifest V3 extension in any Chromium-based browser (Google Chrome, Brave, Microsoft Edge, Arc, Opera, Vivaldi), supporting both toolbar popups and the Chrome Side Panel.
 
-1. Run `pnpm build`.
-2. Open Chrome/Brave/Edge and navigate to `chrome://extensions`.
-3. Enable **Developer mode** in the top-right corner.
-4. Click **Load unpacked** and select the [`dist`](<file:///h:/web/13-Talika/Talika-To%20Do%20List/dist>) folder.
+#### 1. Build the Extension
+```bash
+# Build the production bundle into dist/
+npm run build
+```
+This automatically compiles TypeScript, bundles React assets with Vite, and generates crisp PNG icons into the `dist/` folder.
+
+#### 2. Install in Google Chrome / Chromium / Brave / Edge
+1. Open your browser and navigate to the Extensions management page:
+   - **Chrome / Brave / Chromium:** `chrome://extensions`
+   - **Microsoft Edge:** `edge://extensions`
+   - **Opera:** `opera://extensions`
+2. Turn ON **Developer mode** toggle (located in the top-right corner of Chrome/Brave, or bottom-left in Edge).
+3. Click the **Load unpacked** button in the top toolbar.
+4. Browse to and select the **`dist`** folder inside your project directory (`/path/to/Talika-To-Do-List/dist`).
+5. **Talika** will now appear in your list of active extensions!
+
+#### 3. Using the Extension
+- **Toolbar Quick Popup:** Click the puzzle icon in Chrome's toolbar, pin Talika, then click the Talika icon to open a fast task popup.
+- **Side Panel Multitasking:** Right-click anywhere on any webpage and select **"Open Talika in Side Panel"** to dock Talika side-by-side with your browsing session. You can also open the Side Panel directly from Chrome's Side Panel menu.
+- **Offline Capable:** Full task creation, reordering, and subtasks remain accessible even without an active internet connection.
+
+#### 4. Updating After Code Changes
+Whenever you modify code and run `npm run build`:
+1. Go back to `chrome://extensions`.
+2. Find **Talika** in the list.
+3. Click the **Refresh / Reload (⟳)** icon on the Talika extension card.
 
 ---
 

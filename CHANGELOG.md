@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-09-02
+### Added
+- Manifest V3 Chrome Extension support with toolbar popup and Chrome Side Panel integration.
+- Automated PNG icon generator (`scripts/generate-icons.js`) producing pixel-perfect 16x16, 32x32, 48x48, and 128x128 icons.
+- MV3 background service worker (`background.js`) with right-click context menu ("Open Talika in Side Panel").
+- Chrome Web Store metadata, privacy policy disclosures, and permissions justifications (`CHROMEWEBSTORE.md`).
+- Step-by-step developer installation guide in `README.md` for Chromium browsers (Chrome, Edge, Brave).
+
 ## [0.1.3] - 2026-08-27
 ### Fixed
 - Fixed settings toggle buttons getting stuck by including `reduceAnimations` and `fastMode` in Firestore preferences update payloads and adding immediate optimistic UI state updates in `AuthContext`.

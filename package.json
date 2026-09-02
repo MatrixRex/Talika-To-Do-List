@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "firebase emulators:exec \"vite\"",
     "dev:vite": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/generate-icons.js && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
