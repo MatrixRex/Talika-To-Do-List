@@ -191,3 +191,4 @@ for (const size of sizes) {
   fs.writeFileSync(targetPath, png);
   console.log(`Generated ${targetPath} (${size}x${size}, ${png.length} bytes)`);
 }
+
