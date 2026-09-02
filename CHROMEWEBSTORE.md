@@ -126,7 +126,7 @@ https://github.com/MatrixRex/Talika-To-Do-List
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
-| 0.1.4 | 2026-09-02 | Manifest V3 build with side panel, popup, context menus, and PNG icon assets | Draft |
+| 0.2.0 | 2026-09-02 | Manifest V3 build with direct Side Panel toggle, exact brand PNG icons, and Google OAuth2 integration | Draft |
 
 ## Review Notes
 
