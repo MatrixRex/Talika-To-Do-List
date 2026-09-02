@@ -30,7 +30,8 @@
     "sidePanel",
     "storage",
     "contextMenus",
-    "identity"
+    "identity",
+    "tabs"
   ],
   "host_permissions": [
     "https://*.firebaseio.com/*",

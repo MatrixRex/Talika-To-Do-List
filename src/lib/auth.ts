@@ -26,11 +26,15 @@ import { UserSchema, type User, type UserPrefs } from './schema';
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-interface ChromeIdentity {
+interface ChromeApi {
   identity?: {
     getAuthToken?: (options: { interactive: boolean }, callback: (token?: string) => void) => void;
   };
+  tabs?: {
+    create?: (options: { url: string }) => void;
+  };
   runtime?: {
+    getURL?: (path: string) => string;
     lastError?: unknown;
   };
 }
@@ -39,9 +43,20 @@ interface ChromeIdentity {
  * Platform-aware Google Sign-In supporting Web, Chrome Extension MV3, and Capacitor Android.
  */
 export async function signInWithGoogle(): Promise<UserCredential | null> {
-  const chromeObj = (typeof globalThis !== 'undefined' ? (globalThis as unknown as { chrome?: ChromeIdentity }).chrome : undefined);
+  const isExtension = typeof window !== 'undefined' && (
+    window.location.protocol.startsWith('chrome-extension') ||
+    window.location.protocol.startsWith('moz-extension')
+  );
 
-  // 1. Chrome Extension target (MV3 identity API)
+  const chromeObj = (typeof globalThis !== 'undefined' ? (globalThis as unknown as { chrome?: ChromeApi }).chrome : undefined);
+
+  // If in Chrome Extension and inside a popup window (width <= 460), open Talika in a dedicated tab so popup closing doesn't abort sign-in
+  if (isExtension && chromeObj?.tabs?.create && chromeObj?.runtime?.getURL && window.innerWidth <= 460) {
+    chromeObj.tabs.create({ url: chromeObj.runtime.getURL('index.html') });
+    return null;
+  }
+
+  // 1. Chrome Extension target (MV3 identity API if oauth2 client configured)
   if (chromeObj?.identity?.getAuthToken) {
     try {
       const token = await new Promise<string>((resolve, reject) => {
@@ -55,7 +70,7 @@ export async function signInWithGoogle(): Promise<UserCredential | null> {
       const credential = GoogleAuthProvider.credential(null, token);
       return await signInWithCredential(auth, credential);
     } catch (identityErr) {
-      console.warn('Chrome identity getAuthToken unconfigured or unavailable, falling back to popup:', identityErr);
+      console.warn('Chrome identity getAuthToken unavailable, falling back to popup:', identityErr);
     }
   }
 
@@ -69,13 +84,13 @@ export async function signInWithGoogle(): Promise<UserCredential | null> {
     }
   }
 
-  // 3. Web / PWA / Extension Popup Fallback
+  // 3. Web / PWA / Extension Tab
   try {
     return await signInWithPopup(auth, googleProvider);
   } catch (popupErr: unknown) {
     const error = popupErr as { code?: string };
     if (error?.code === 'auth/popup-blocked' || error?.code === 'auth/cancelled-popup-request') {
-      if (typeof window !== 'undefined' && !window.location.protocol.startsWith('chrome-extension')) {
+      if (!isExtension) {
         console.warn('Popup blocked, falling back to signInWithRedirect:', popupErr);
         await signInWithRedirect(auth, googleProvider);
         return null;
@@ -83,20 +98,6 @@ export async function signInWithGoogle(): Promise<UserCredential | null> {
     }
     throw popupErr;
   }
-}
-
-/**
- * Sign in using email and password.
- */
-export async function signInEmail(email: string, password: string): Promise<UserCredential> {
-  return await signInWithEmailAndPassword(auth, email, password);
-}
-
-/**
- * Create a new account using email and password.
- */
-export async function signUpEmail(email: string, password: string): Promise<UserCredential> {
-  return await createUserWithEmailAndPassword(auth, email, password);
 }
 
 /**
