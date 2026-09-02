@@ -29,6 +29,8 @@ googleProvider.setCustomParameters({ prompt: 'select_account' });
 interface ChromeApi {
   identity?: {
     getAuthToken?: (options: { interactive: boolean }, callback: (token?: string) => void) => void;
+    launchWebAuthFlow?: (options: { url: string; interactive: boolean }) => Promise<string>;
+    getRedirectURL?: (path?: string) => string;
   };
   tabs?: {
     create?: (options: { url: string }) => void;
@@ -50,27 +52,57 @@ export async function signInWithGoogle(): Promise<UserCredential | null> {
 
   const chromeObj = (typeof globalThis !== 'undefined' ? (globalThis as unknown as { chrome?: ChromeApi }).chrome : undefined);
 
-  // If in Chrome Extension and inside a popup window (width <= 460), open Talika in a dedicated tab so popup closing doesn't abort sign-in
-  if (isExtension && chromeObj?.tabs?.create && chromeObj?.runtime?.getURL && window.innerWidth <= 460) {
-    chromeObj.tabs.create({ url: chromeObj.runtime.getURL('index.html') });
-    return null;
-  }
-
-  // 1. Chrome Extension target (MV3 identity API if oauth2 client configured)
-  if (chromeObj?.identity?.getAuthToken) {
-    try {
-      const token = await new Promise<string>((resolve, reject) => {
-        chromeObj.identity!.getAuthToken!({ interactive: true }, (token?: string) => {
-          if (chromeObj.runtime?.lastError || !token) {
-            return reject(chromeObj.runtime?.lastError || new Error('Chrome identity failed to get auth token'));
-          }
-          resolve(token);
+  // 1. Chrome Extension Target (Manifest V3)
+  // Note: Standard signInWithPopup is blocked by MV3 CSP (cannot inject remote apis.google.com/js/api.js script).
+  // In extensions, Google Auth uses chrome.identity.getAuthToken or launchWebAuthFlow.
+  if (isExtension) {
+    if (chromeObj?.identity?.getAuthToken) {
+      try {
+        const token = await new Promise<string>((resolve, reject) => {
+          chromeObj.identity!.getAuthToken!({ interactive: true }, (token?: string) => {
+            if (chromeObj.runtime?.lastError || !token) {
+              const err = chromeObj.runtime?.lastError;
+              return reject(err || new Error('No token returned from chrome.identity'));
+            }
+            resolve(token);
+          });
         });
-      });
-      const credential = GoogleAuthProvider.credential(null, token);
-      return await signInWithCredential(auth, credential);
-    } catch (identityErr) {
-      console.warn('Chrome identity getAuthToken unavailable, falling back to popup:', identityErr);
+        const credential = GoogleAuthProvider.credential(null, token);
+        return await signInWithCredential(auth, credential);
+      } catch (identityErr: unknown) {
+        console.warn('chrome.identity.getAuthToken error:', identityErr);
+
+        // Try launchWebAuthFlow if Google Client ID is configured in env
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || import.meta.env.VITE_FIREBASE_CLIENT_ID;
+        if (clientId && chromeObj?.identity?.launchWebAuthFlow && chromeObj?.identity?.getRedirectURL) {
+          try {
+            const redirectUri = chromeObj.identity.getRedirectURL();
+            const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('openid email profile')}`;
+            const responseUrl = await chromeObj.identity.launchWebAuthFlow({
+              url: authUrl,
+              interactive: true,
+            });
+            const hashParams = new URLSearchParams(new URL(responseUrl).hash.substring(1));
+            const accessToken = hashParams.get('access_token');
+            if (accessToken) {
+              const credential = GoogleAuthProvider.credential(null, accessToken);
+              return await signInWithCredential(auth, credential);
+            }
+          } catch (flowErr) {
+            console.warn('launchWebAuthFlow failed:', flowErr);
+          }
+        }
+
+        const errObj = identityErr as { message?: string };
+        const isMissingOAuth = !errObj?.message || errObj.message.includes('OAuth2') || errObj.message.includes('client ID');
+        if (isMissingOAuth) {
+          throw new Error(
+            'Google Sign-In on Chrome extension requires an OAuth2 client ID in Google Cloud Console. For local testing, please click "Quick Demo Sign-In".',
+            { cause: identityErr }
+          );
+        }
+        throw identityErr;
+      }
     }
   }
 
@@ -84,17 +116,15 @@ export async function signInWithGoogle(): Promise<UserCredential | null> {
     }
   }
 
-  // 3. Web / PWA / Extension Tab
+  // 3. Web / PWA
   try {
     return await signInWithPopup(auth, googleProvider);
   } catch (popupErr: unknown) {
     const error = popupErr as { code?: string };
     if (error?.code === 'auth/popup-blocked' || error?.code === 'auth/cancelled-popup-request') {
-      if (!isExtension) {
-        console.warn('Popup blocked, falling back to signInWithRedirect:', popupErr);
-        await signInWithRedirect(auth, googleProvider);
-        return null;
-      }
+      console.warn('Popup blocked, falling back to signInWithRedirect:', popupErr);
+      await signInWithRedirect(auth, googleProvider);
+      return null;
     }
     throw popupErr;
   }
