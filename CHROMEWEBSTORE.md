@@ -67,6 +67,12 @@ English
 | `sidePanel` | permissions | Allows Talika to dock alongside web browsing tabs for side-by-side task management. |
 | `storage` | permissions | Persists extension preferences and cache state across browser sessions. |
 | `contextMenus` | permissions | Adds a right-click context menu action ("Open Talika in Side Panel") to conveniently trigger the side panel from any page. |
+| `identity` | permissions | Enables Google Sign-In and user authentication within the Chrome extension. |
+| `https://*.firebaseio.com/*` | host_permissions | Connects to Firebase Firestore and Auth real-time sync endpoints. |
+| `https://*.googleapis.com/*` | host_permissions | Facilitates Google account sign-in and token authorization for cloud sync. |
+| `https://*.firebaseapp.com/*` | host_permissions | Serves Firebase authentication redirect and popup handlers. |
+| `http://127.0.0.1/*` | host_permissions | Allows connecting to local Firebase emulators during development. |
+| `http://localhost/*` | host_permissions | Allows connecting to local development server and emulators. |
 
 ## Privacy & Data Use
 

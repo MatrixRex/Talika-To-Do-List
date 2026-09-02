@@ -3,10 +3,12 @@ import { getFirestore, connectFirestoreEmulator, enableMultiTabIndexedDbPersiste
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 
 const isDev = import.meta.env.DEV;
-const useEmulator = isDev || import.meta.env.VITE_USE_EMULATOR === 'true';
+const rawApiKey = import.meta.env.VITE_FIREBASE_API_KEY;
+const isPlaceholderKey = !rawApiKey || rawApiKey === 'fake-api-key-for-dev';
+const useEmulator = isDev || import.meta.env.VITE_USE_EMULATOR === 'true' || isPlaceholderKey;
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'fake-api-key-for-dev',
+  apiKey: rawApiKey || 'fake-api-key-for-dev',
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'localhost',
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'demo-talika',
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
@@ -18,7 +20,14 @@ export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
-const emulatorHost = (typeof window !== 'undefined' && window.location.hostname) ? window.location.hostname : '127.0.0.1';
+const isExtension = typeof window !== 'undefined' && (
+  window.location.protocol.startsWith('chrome-extension') ||
+  window.location.protocol.startsWith('moz-extension')
+);
+
+const emulatorHost = (typeof window !== 'undefined' && window.location.hostname && !isExtension && window.location.hostname !== 'localhost')
+  ? window.location.hostname
+  : '127.0.0.1';
 
 if (useEmulator && typeof window !== 'undefined') {
   try {

@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MV3 background service worker (`background.js`) with right-click context menu ("Open Talika in Side Panel").
 - Chrome Web Store metadata, privacy policy disclosures, and permissions justifications (`CHROMEWEBSTORE.md`).
 - Step-by-step developer installation guide in `README.md` for Chromium browsers (Chrome, Edge, Brave).
+- Direct Email & Password sign-in and registration options in `LoginView`.
+- Robust Chrome Extension authentication with `identity` permission, `host_permissions` for Firebase endpoints, and seamless popup fallback.
 
 ## [0.1.3] - 2026-08-27
 ### Fixed

@@ -29,6 +29,14 @@
   "permissions": [
     "sidePanel",
     "storage",
-    "contextMenus"
+    "contextMenus",
+    "identity"
+  ],
+  "host_permissions": [
+    "https://*.firebaseio.com/*",
+    "https://*.googleapis.com/*",
+    "https://*.firebaseapp.com/*",
+    "http://127.0.0.1/*",
+    "http://localhost/*"
   ]
 }

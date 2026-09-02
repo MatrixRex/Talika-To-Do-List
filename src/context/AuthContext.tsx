@@ -5,6 +5,8 @@ import { auth, db } from '../lib/firebase';
 import {
   signInWithGoogle,
   signInAsDemoUser,
+  signInEmail,
+  signUpEmail,
   getRedirectResult,
   signOutUser,
   syncUserProfile,
@@ -17,6 +19,8 @@ interface AuthContextType {
   userProfile: User | null;
   loading: boolean;
   signIn: () => Promise<void>;
+  signInWithEmail: (email: string, pass: string) => Promise<void>;
+  signUpWithEmail: (email: string, pass: string) => Promise<void>;
   signInDemo: (email?: string) => Promise<void>;
   signOut: () => Promise<void>;
   updatePrefs: (prefs: Partial<UserPrefs>) => Promise<void>;
@@ -114,6 +118,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const handleSignInWithEmail = async (email: string, pass: string) => {
+    setLoading(true);
+    try {
+      const cred = await signInEmail(email, pass);
+      if (cred?.user) {
+        setFirebaseUser(cred.user);
+        const profile = await syncUserProfile(cred.user);
+        setUserProfile(profile);
+      }
+    } catch (err) {
+      console.error('Email sign-in error:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUpWithEmail = async (email: string, pass: string) => {
+    setLoading(true);
+    try {
+      const cred = await signUpEmail(email, pass);
+      if (cred?.user) {
+        setFirebaseUser(cred.user);
+        const profile = await syncUserProfile(cred.user);
+        setUserProfile(profile);
+      }
+    } catch (err) {
+      console.error('Email sign-up error:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSignInDemo = async (email = 'demo@talika.app') => {
     setLoading(true);
     try {
@@ -174,6 +212,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userProfile,
         loading,
         signIn: handleSignIn,
+        signInWithEmail: handleSignInWithEmail,
+        signUpWithEmail: handleSignUpWithEmail,
         signInDemo: handleSignInDemo,
         signOut: handleSignOut,
         updatePrefs: handleUpdatePrefs,

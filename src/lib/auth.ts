@@ -43,25 +43,24 @@ export async function signInWithGoogle(): Promise<UserCredential | null> {
 
   // 1. Chrome Extension target (MV3 identity API)
   if (chromeObj?.identity?.getAuthToken) {
-    return new Promise((resolve, reject) => {
-      chromeObj.identity!.getAuthToken!({ interactive: true }, async (token?: string) => {
-        if (chromeObj.runtime?.lastError || !token) {
-          return reject(chromeObj.runtime?.lastError || new Error('Chrome identity failed to get auth token'));
-        }
-        try {
-          const credential = GoogleAuthProvider.credential(null, token);
-          const cred = await signInWithCredential(auth, credential);
-          resolve(cred);
-        } catch (err) {
-          reject(err);
-        }
+    try {
+      const token = await new Promise<string>((resolve, reject) => {
+        chromeObj.identity!.getAuthToken!({ interactive: true }, (token?: string) => {
+          if (chromeObj.runtime?.lastError || !token) {
+            return reject(chromeObj.runtime?.lastError || new Error('Chrome identity failed to get auth token'));
+          }
+          resolve(token);
+        });
       });
-    });
+      const credential = GoogleAuthProvider.credential(null, token);
+      return await signInWithCredential(auth, credential);
+    } catch (identityErr) {
+      console.warn('Chrome identity getAuthToken unconfigured or unavailable, falling back to popup:', identityErr);
+    }
   }
 
   // 2. Capacitor Android / Native Shell
   if (Capacitor.isNativePlatform()) {
-    // Native Capacitor platform can use popup or Capacitor GoogleAuth plugin if installed
     try {
       return await signInWithPopup(auth, googleProvider);
     } catch (nativeErr) {
@@ -70,22 +69,38 @@ export async function signInWithGoogle(): Promise<UserCredential | null> {
     }
   }
 
-  // 3. Web / PWA
+  // 3. Web / PWA / Extension Popup Fallback
   try {
     return await signInWithPopup(auth, googleProvider);
   } catch (popupErr: unknown) {
     const error = popupErr as { code?: string };
     if (error?.code === 'auth/popup-blocked' || error?.code === 'auth/cancelled-popup-request') {
-      console.warn('Popup blocked, falling back to signInWithRedirect:', popupErr);
-      await signInWithRedirect(auth, googleProvider);
-      return null;
+      if (typeof window !== 'undefined' && !window.location.protocol.startsWith('chrome-extension')) {
+        console.warn('Popup blocked, falling back to signInWithRedirect:', popupErr);
+        await signInWithRedirect(auth, googleProvider);
+        return null;
+      }
     }
     throw popupErr;
   }
 }
 
 /**
- * 1-Tap instant sign-in for emulator / local mobile testing without relying on popup windows.
+ * Sign in using email and password.
+ */
+export async function signInEmail(email: string, password: string): Promise<UserCredential> {
+  return await signInWithEmailAndPassword(auth, email, password);
+}
+
+/**
+ * Create a new account using email and password.
+ */
+export async function signUpEmail(email: string, password: string): Promise<UserCredential> {
+  return await createUserWithEmailAndPassword(auth, email, password);
+}
+
+/**
+ * 1-Tap instant sign-in for emulator / local testing without relying on popup windows.
  */
 export async function signInAsDemoUser(email = 'demo@talika.app', password = 'password123'): Promise<UserCredential> {
   try {
