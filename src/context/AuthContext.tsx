@@ -8,7 +8,12 @@ import {
   getRedirectResult,
   signOutUser,
   syncUserProfile,
-  updateUserPreferences
+  updateUserPreferences,
+  getCachedAuthUser,
+  saveCachedAuthUser,
+  getCachedUserProfile,
+  saveCachedUserProfile,
+  clearCachedAuth,
 } from '../lib/auth';
 import type { User, UserPrefs } from '../lib/schema';
 
@@ -25,77 +30,123 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [userProfile, setUserProfile] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const initialCachedUser = getCachedAuthUser();
+  const initialCachedProfile = getCachedUserProfile();
+  const hasInitialSession = !!initialCachedUser;
+
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(
+    () => (initialCachedUser ? (initialCachedUser as unknown as FirebaseUser) : null)
+  );
+  const [userProfile, setUserProfile] = useState<User | null>(
+    () => initialCachedProfile
+  );
+  const [loading, setLoading] = useState<boolean>(
+    () => !hasInitialSession
+  );
 
   useEffect(() => {
     let unsubProfile: (() => void) | null = null;
+    let isMounted = true;
 
     // Check for redirect sign-in result (mobile browser fallback)
     getRedirectResult(auth)
       .then(async (cred) => {
+        if (!isMounted) return;
         if (cred?.user) {
           setFirebaseUser(cred.user);
+          saveCachedAuthUser(cred.user);
           const profile = await syncUserProfile(cred.user);
-          setUserProfile(profile);
-          setLoading(false);
+          if (isMounted) {
+            setUserProfile(profile);
+            setLoading(false);
+          }
         }
       })
       .catch((err) => {
         console.warn('getRedirectResult notice:', err);
       });
 
-    // Safety fallback: ensure initial loading resolves even on slow/offline connections
-    const fallbackTimer = setTimeout(() => {
-      setLoading(false);
-    }, 1500);
+    // Safety timeout ONLY when there is no cached session, to avoid hanging on cold unauthenticated starts
+    const safetyTimer = setTimeout(() => {
+      if (isMounted && !hasInitialSession) {
+        setLoading(false);
+      }
+    }, 3000);
 
     const unsubAuth = onAuthStateChanged(
       auth,
       async (user) => {
-        clearTimeout(fallbackTimer);
-        setFirebaseUser(user);
-        setLoading(false);
+        clearTimeout(safetyTimer);
+        if (!isMounted) return;
 
         if (user) {
+          setFirebaseUser(user);
+          saveCachedAuthUser(user);
+          setLoading(false);
+
           try {
             const profile = await syncUserProfile(user);
-            setUserProfile(profile);
+            if (isMounted) {
+              setUserProfile(profile);
+            }
 
             // Listen to live changes to user profile (e.g. preferences)
-            unsubProfile = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
-              if (docSnap.exists()) {
-                setUserProfile({
-                  ...docSnap.data(),
-                  uid: user.uid,
-                } as User);
+            if (unsubProfile) {
+              unsubProfile();
+            }
+            unsubProfile = onSnapshot(
+              doc(db, 'users', user.uid),
+              (docSnap) => {
+                if (!isMounted) return;
+                if (docSnap.exists()) {
+                  const p = {
+                    ...docSnap.data(),
+                    uid: user.uid,
+                  } as User;
+                  setUserProfile(p);
+                  saveCachedUserProfile(p);
+                }
+              },
+              (err) => {
+                console.warn('Profile snapshot notice (offline/permission):', err);
               }
-            });
+            );
           } catch (err) {
-            console.error('Failed to load user profile:', err);
+            console.error('Failed to sync user profile:', err);
           }
         } else {
-          setUserProfile(null);
-          if (unsubProfile) {
-            unsubProfile();
-            unsubProfile = null;
-          }
+          // If no user found by Firebase Auth, confirm via authStateReady before clearing
+          auth.authStateReady().then(() => {
+            if (!isMounted) return;
+            if (!auth.currentUser) {
+              clearCachedAuth();
+              setFirebaseUser(null);
+              setUserProfile(null);
+              setLoading(false);
+              if (unsubProfile) {
+                unsubProfile();
+                unsubProfile = null;
+              }
+            }
+          });
         }
       },
       (error) => {
         console.error('onAuthStateChanged error:', error);
-        clearTimeout(fallbackTimer);
-        setLoading(false);
+        clearTimeout(safetyTimer);
+        if (isMounted && !hasInitialSession) {
+          setLoading(false);
+        }
       }
     );
 
     return () => {
-      clearTimeout(fallbackTimer);
+      isMounted = false;
+      clearTimeout(safetyTimer);
       unsubAuth();
       if (unsubProfile) unsubProfile();
     };
-  }, []);
+  }, [hasInitialSession]);
 
   const handleSignIn = async () => {
     setLoading(true);

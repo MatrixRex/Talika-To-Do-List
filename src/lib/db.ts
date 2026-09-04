@@ -18,11 +18,12 @@ import {
   type Query,
   type QuerySnapshot
 } from 'firebase/firestore';
-import { db, auth } from './firebase';
+import { db } from './firebase';
 import { generateKeyBetween } from './sort-keys';
 import { generateUUID } from './uuid';
 import { validateItemContext } from './schema';
 import type { Item, Folder, Reminder, User } from './schema';
+import { getEffectiveUserId } from './auth';
 
 const BATCH_LIMIT = 500;
 
@@ -59,7 +60,7 @@ export async function getCachedDocs(
 }
 
 export async function firstKeyIn(folderId: string | null, parentId: string | null): Promise<string | null> {
-  const uid = auth.currentUser?.uid || '';
+  const uid = getEffectiveUserId();
   const itemsRef = collection(db, 'items');
   const q = query(
     itemsRef,
@@ -75,7 +76,7 @@ export async function firstKeyIn(folderId: string | null, parentId: string | nul
 }
 
 export async function lastKeyIn(folderId: string | null, parentId: string | null): Promise<string | null> {
-  const uid = auth.currentUser?.uid || '';
+  const uid = getEffectiveUserId();
   const itemsRef = collection(db, 'items');
   const q = query(
     itemsRef,
@@ -197,7 +198,7 @@ export async function reorderItem(itemId: string, newSortKey: string): Promise<v
 }
 
 export async function getSubtasks(itemId: string): Promise<Item[]> {
-  const uid = auth.currentUser?.uid || '';
+  const uid = getEffectiveUserId();
   const itemsRef = collection(db, 'items');
   const q = query(itemsRef, where('memberIds', 'array-contains', uid), where('parentId', '==', itemId));
   const snap = await getCachedDocs(q);
@@ -372,7 +373,7 @@ export async function reorderFolder(folderId: string, newSortKey: string): Promi
 }
 
 async function getItemsInFolder(folderId: string): Promise<string[]> {
-  const uid = auth.currentUser?.uid || '';
+  const uid = getEffectiveUserId();
   const itemsRef = collection(db, 'items');
   const q = query(itemsRef, where('memberIds', 'array-contains', uid), where('folderId', '==', folderId));
   const snap = await getCachedDocs(q);
@@ -405,14 +406,14 @@ export async function deleteFolder(folderId: string): Promise<void> {
 
 export async function orphanSweep(): Promise<void> {
   try {
-    const uid = auth.currentUser?.uid;
+    const uid = getEffectiveUserId();
     if (!uid) return;
 
-    const foldersSnap = await getDocs(query(collection(db, 'folders'), where('memberIds', 'array-contains', uid)));
+    const foldersSnap = await getCachedDocs(query(collection(db, 'folders'), where('memberIds', 'array-contains', uid)));
     const validFolderIds = new Set(foldersSnap.docs.map(d => d.id));
     validFolderIds.add('null');
     
-    const itemsSnap = await getDocs(query(collection(db, 'items'), where('memberIds', 'array-contains', uid)));
+    const itemsSnap = await getCachedDocs(query(collection(db, 'items'), where('memberIds', 'array-contains', uid)));
     const orphanedIds: string[] = [];
     const validItemIds = new Set(itemsSnap.docs.map(d => d.id));
     
@@ -523,7 +524,7 @@ export async function shareFolder(
     }
   }
 
-  const uid = auth.currentUser?.uid || '';
+  const uid = getEffectiveUserId();
   const itemsRef = collection(db, 'items');
   const q = query(itemsRef, where('memberIds', 'array-contains', uid), where('folderId', '==', folderId));
   const snap = await getCachedDocs(q);
@@ -708,7 +709,7 @@ export async function revokeFolderMember(
   delete newRoles[memberIdToRemove];
 
   const now = Timestamp.now();
-  const uid = auth.currentUser?.uid || '';
+  const uid = getEffectiveUserId();
   const itemsRef = collection(db, 'items');
   const q = query(itemsRef, where('memberIds', 'array-contains', uid), where('folderId', '==', folderId));
   const snap = await getCachedDocs(q);
@@ -748,7 +749,7 @@ export async function leaveFolder(folderId: string, actorId: string): Promise<vo
 }
 
 export async function countFolderReminders(folderId: string): Promise<number> {
-  const uid = auth.currentUser?.uid || '';
+  const uid = getEffectiveUserId();
   const itemsRef = collection(db, 'items');
   const q = query(itemsRef, where('memberIds', 'array-contains', uid), where('folderId', '==', folderId));
   const snap = await getCachedDocs(q);

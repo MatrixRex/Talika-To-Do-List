@@ -13,11 +13,13 @@ import {
 import {
   doc,
   getDoc,
+  getDocFromCache,
   setDoc,
   updateDoc,
   Timestamp,
   terminate,
-  clearIndexedDbPersistence
+  clearIndexedDbPersistence,
+  type DocumentSnapshot
 } from 'firebase/firestore';
 import { Capacitor } from '@capacitor/core';
 import { auth, db } from './firebase';
@@ -151,10 +153,96 @@ export async function signInAsDemoUser(email = 'demo@talika.app', password = 'pa
 
 export { getRedirectResult };
 
+export interface CachedAuthUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+}
+
+const AUTH_USER_KEY = 'talika:auth_user';
+const USER_PROFILE_KEY = 'talika:user_profile';
+
+export function getCachedAuthUser(): CachedAuthUser | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(AUTH_USER_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.uid === 'string') {
+      return parsed as CachedAuthUser;
+    }
+  } catch (err) {
+    console.warn('Failed to parse cached auth user:', err);
+  }
+  return null;
+}
+
+export function saveCachedAuthUser(user: FirebaseUser | CachedAuthUser): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const payload: CachedAuthUser = {
+      uid: user.uid,
+      email: user.email || null,
+      displayName: user.displayName || null,
+      photoURL: user.photoURL || null,
+    };
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(payload));
+  } catch (err) {
+    console.warn('Failed to save cached auth user:', err);
+  }
+}
+
+export function getCachedUserProfile(): User | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(USER_PROFILE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.uid === 'string') {
+      if (parsed.createdAt && typeof parsed.createdAt.seconds === 'number') {
+        parsed.createdAt = new Timestamp(parsed.createdAt.seconds, parsed.createdAt.nanoseconds || 0);
+      }
+      return UserSchema.parse(parsed);
+    }
+  } catch (err) {
+    console.warn('Failed to parse cached user profile:', err);
+  }
+  return null;
+}
+
+export function saveCachedUserProfile(profile: User): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile));
+  } catch (err) {
+    console.warn('Failed to save cached user profile:', err);
+  }
+}
+
+export function clearCachedAuth(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(AUTH_USER_KEY);
+    localStorage.removeItem(USER_PROFILE_KEY);
+  } catch (err) {
+    console.warn('Failed to clear cached auth:', err);
+  }
+}
+
+export function hasCachedAuthSession(): boolean {
+  return getCachedAuthUser() !== null;
+}
+
+export function getEffectiveUserId(): string {
+  return auth.currentUser?.uid || getCachedAuthUser()?.uid || '';
+}
+
 /**
  * Sign out and clear local IndexedDB cache per SPEC.md Stage 3 exit criterion.
  */
 export async function signOutUser(): Promise<void> {
+  clearCachedAuth();
   await signOut(auth);
   try {
     await terminate(db);
@@ -168,10 +256,19 @@ export async function signOutUser(): Promise<void> {
  * Synchronize and ensure the users/{uid} document exists in Firestore matching SPEC.md data model.
  */
 export async function syncUserProfile(firebaseUser: FirebaseUser): Promise<User> {
+  saveCachedAuthUser(firebaseUser);
   const userRef = doc(db, 'users', firebaseUser.uid);
   try {
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
+    let userSnap: DocumentSnapshot | null = null;
+    try {
+      userSnap = await getDocFromCache(userRef);
+    } catch {
+      // If not in cache or offline, will try server
+    }
+    if (!userSnap || !userSnap.exists()) {
+      userSnap = await getDoc(userRef);
+    }
+    if (userSnap && userSnap.exists()) {
       const raw = userSnap.data();
       const user = UserSchema.parse({
         ...raw,
@@ -179,12 +276,19 @@ export async function syncUserProfile(firebaseUser: FirebaseUser): Promise<User>
       });
       if (user.email && user.email !== user.email.toLowerCase()) {
         user.email = user.email.toLowerCase();
-        await updateDoc(userRef, { email: user.email });
+        await updateDoc(userRef, { email: user.email }).catch(() => {});
       }
+      saveCachedUserProfile(user);
       return user;
     }
   } catch (err) {
-    console.warn('Could not read user profile from Firestore, using defaults:', err);
+    console.warn('Could not read user profile from Firestore, using local cache/defaults:', err);
+  }
+
+  // Check local cache if available before using default
+  const cached = getCachedUserProfile();
+  if (cached && cached.uid === firebaseUser.uid) {
+    return cached;
   }
 
   // First sign-in: initialize user profile document with default preferences
@@ -210,6 +314,7 @@ export async function syncUserProfile(firebaseUser: FirebaseUser): Promise<User>
   } catch (err) {
     console.warn('Could not write initial user profile to Firestore:', err);
   }
+  saveCachedUserProfile(validated);
   return validated;
 }
 

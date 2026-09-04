@@ -250,7 +250,7 @@ function renderExactIcon(targetSize) {
   return buffer;
 }
 
-const sizes = [16, 32, 48, 128];
+const sizes = [16, 32, 48, 128, 192, 512];
 for (const size of sizes) {
   const rgba = renderExactIcon(size);
   const png = createPng(size, size, rgba);

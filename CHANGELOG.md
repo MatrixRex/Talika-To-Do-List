@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Fixed
+- Fixed PWA offline unavailability: implemented Service Worker app-shell precaching, network-first navigation with offline fallback to cached `index.html`, and cache-first static bundle delivery.
+- Fixed startup login screen flash ("silent login"): synchronously restored cached user credentials and profile from `localStorage` on React mount, eliminating premature fallback timers and preventing `<LoginView />` from flashing while background auth is initializing.
+- Fixed offline app getting stuck at the login screen: ensured authenticated sessions and UID resolution are available offline, and converted `syncUserProfile` and `orphanSweep` to query Firestore's local IndexedDB cache (`getCachedDoc` / `getCachedDocs`) without stalling on network timeouts.
+- Added standard 192×192 and 512×512 PWA icons to `public/site.webmanifest` and automated icon generator.
+
 ## [0.2.0] - 2026-09-02
 ### Added
 - Manifest V3 Chrome Extension target with direct Side Panel toggle and action bar support.

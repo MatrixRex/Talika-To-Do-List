@@ -496,6 +496,12 @@ change roles · move-out transfers ownership and removes it for everyone else.
 Optimistic UI mutations: all task and folder mutations (create, rename, toggle, delete, duplicate, promote, move, reorder, and reminders) update React state instantaneously (<16ms) with automatic rollback on error.
 Cache-first database layer: all database reads query the local IndexedDB cache (`getDocFromCache`/`getDocsFromCache`) in 0-1ms without waiting for remote server round-trips.
 
+**Offline PWA & Silent Authentication:**
+- **PWA Service Worker App Shell Caching (`sw.js`):** Pre-caches app shell assets (`index.html`, SVG/PNG icons, webmanifest). Intercepts navigation requests using network-first with offline fallback to cached `index.html`. Delivers static bundles (`/assets/*`) cache-first with dynamic runtime caching. Bypasses cross-origin Firebase APIs to let Firestore's IndexedDB persistence handle mutations.
+- **Silent Auth Session Restore:** Synchronously restores user credentials and profile from `localStorage` on React mount. Eliminates the flash of `<LoginView />` during both online background verification and offline sessions. Binds `getEffectiveUserId()` so queries and mutations function offline before async Firebase Auth listeners resolve.
+- **Cache-First Profile & Startup Sweeps:** `syncUserProfile` queries local cache first and falls back to cached local storage profile when offline. `orphanSweep` queries `getCachedDocs` to avoid cold-start network hangs.
+- **Exit test suite in `src/lib/offline-auth.test.ts`** (6 tests covering synchronous auth hydration, profile persistence, sign-out cleanup, effective UID fallback, offline profile resilience, and service worker routing).
+
 Lazy-load the Firestore SDK: render from the IndexedDB cache first, dynamic-import
 the SDK after first paint. This is worth more than every other perf change
 combined. Then flip the Preact alias:
