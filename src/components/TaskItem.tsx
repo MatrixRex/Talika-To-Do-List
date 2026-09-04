@@ -271,6 +271,7 @@ export function TaskItem({
                 icon={<Icon name="edit" />}
                 onClick={() => {
                   setMenuOpen(false);
+                  setRenameValue(item.title);
                   setIsRenameOpen(true);
                 }}
               >
