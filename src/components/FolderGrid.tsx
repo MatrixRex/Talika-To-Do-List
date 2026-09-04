@@ -306,6 +306,7 @@ function SortableFolderCard({
                   icon={<Icon name="edit" />}
                   onClick={() => {
                     setMenuOpen(false);
+                    setRenameValue(folder.name);
                     setIsRenameOpen(true);
                   }}
                 >

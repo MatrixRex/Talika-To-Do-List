@@ -94,6 +94,7 @@ export function SubtaskItem({ subtask, index = 0, onComplete, onRename, onDelete
                   icon={<Icon name="edit" />}
                   onClick={() => {
                     setMenuOpen(false);
+                    setRenameValue(subtask.title);
                     setIsRenameOpen(true);
                   }}
                 >
