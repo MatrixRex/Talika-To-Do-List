@@ -126,6 +126,7 @@ https://github.com/MatrixRex/Talika-To-Do-List
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| 0.2.1 | 2026-09-04 | Offline PWA service worker caching, silent auth session restore, and cache-first offline sweeps | Draft |
 | 0.2.0 | 2026-09-02 | Manifest V3 build with direct Side Panel toggle, exact brand PNG icons, and Google OAuth2 integration | Draft |
 
 ## Review Notes

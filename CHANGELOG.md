@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.2.1] - 2026-09-04
 ### Fixed
 - Fixed PWA offline unavailability: implemented Service Worker app-shell precaching, network-first navigation with offline fallback to cached `index.html`, and cache-first static bundle delivery.
 - Fixed startup login screen flash ("silent login"): synchronously restored cached user credentials and profile from `localStorage` on React mount, eliminating premature fallback timers and preventing `<LoginView />` from flashing while background auth is initializing.
