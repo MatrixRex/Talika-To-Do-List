@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.2.2] - 2026-09-04
 ### Fixed
 - Fixed background tasks and interactive elements being clickable when the rename dialog (or any modal dialog) is open by rendering `Dialog` and `Sheet` via `createPortal` to `document.body`, stopping click event bubbling, and enabling `Escape` key dismissal.
 - Fixed rename input starting with stale text by synchronizing initial rename values upon opening rename dialogs in `TaskItem`, `SubtaskItem`, `FolderGrid`, and `FolderView`.
