@@ -43,3 +43,15 @@ Once `release-it` finishes bumping the version:
    - Run `git commit -m "docs: update changelog for v<New Version>"`
 6. Push the updated documentation commit:
    - Run `git push`
+
+### Step 4: Verify Deployment (GitHub Actions)
+Always verify deployment after releasing:
+1. Check the status of the GitHub Actions release/deployment workflow:
+   - Run `gh run list --limit 1` or `gh run watch`.
+2. Ensure the deployment run completes with `success`.
+3. If the workflow run fails:
+   - Inspect failure logs: `gh run view <run-id> --log-failed`.
+   - Diagnose the root cause, fix the issue in code or workflow configuration.
+   - Commit and push the fix, then trigger or re-run the workflow (`gh run rerun <run-id>` or re-tag/dispatch).
+   - Continue monitoring until the deployment succeeds.
+

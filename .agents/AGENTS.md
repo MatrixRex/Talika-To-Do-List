@@ -43,6 +43,7 @@ model, invariants, and stage plan.
 - Test on the real entry-level Android device, not DevTools throttling.
 - Update `CHANGELOG.md` whenever adding new features, changing behavior, or fixing bugs.
 - Update `README.md` appropriately when introducing new major features or instructions.
+- After every release, verify that the deployment / GitHub Actions workflow succeeds (`gh run list` / `gh run watch`). If it fails, investigate, fix the issue, and retry until deployment succeeds.
 
 ## Bundle budget
 
